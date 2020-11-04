@@ -10,9 +10,11 @@
 //                           IMPORTANTE
 // LOS PINES DEL DISPLAY ESTAN DEFINIDOS CON "DEFINES" EN LA LIBRERIA .C"
 // ---------------------------------------------------------------------
-#define T_REFRESH_DISPLAY        250
-#define	T_PULSADORES			 100
+#define T_REFRESH_DISPLAY		250
+#define	T_PULSADORES			100
 // Cantidad de ms entre refrescos del display
+#define SENSOR_INT				1
+#define SENSOR_EXT				2
 
 /* Librerias */
 #include "stm32_ub_lcd_2x16.h"
@@ -24,6 +26,7 @@
 #include "CE_BT_ADC_control.h"
 #include "CE_PWM_control.h"
 #include "CE_EXTI_control.h"
+#include "CE_DHT11_control.h"
 // Librerias Coletto - Ermantraut
 
 /* Private macro */
@@ -145,6 +148,21 @@ int main(void)
     		GPIOB,
     		GPIO_Pin_3
     };
+
+    DHT_Sensor sensor_int;
+    DHT_Sensor sensor_ext;
+
+	TIM5_Start(); // Inicializa el timer del DHT.
+
+	sensor_int.num_identificacion = SENSOR_INT;
+	sensor_int.puerto = GPIOE;
+	sensor_int.pin = GPIO_Pin_9;
+	sensor_int.periferico = RCC_AHB1Periph_GPIOE;
+
+	sensor_ext.num_identificacion = SENSOR_EXT;
+	sensor_ext.puerto = GPIOE;
+	sensor_ext.pin = GPIO_Pin_10;
+	sensor_ext.periferico = RCC_AHB1Periph_GPIOE;
 
     CE_conf_in(infrarrojo1, GPIO_PuPd_NOPULL);
     CE_EXTI_config(infrarrojo1, int_infrarrojo1);
