@@ -23,7 +23,7 @@
 #include "CE_generic_functions.h"
 #include "CE_SD_card_control.h"
 #include "CE_BT_control.h"
-#include "CE_BT_ADC_control.h"
+#include "CE_ADC_control.h"
 #include "CE_PWM_control.h"
 #include "CE_EXTI_control.h"
 #include "CE_DHT11_control.h"

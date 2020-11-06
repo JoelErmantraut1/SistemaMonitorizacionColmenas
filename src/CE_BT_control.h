@@ -20,14 +20,14 @@
 typedef struct {
 	GPIO_TypeDef* active_port; // Puerto del pin conectado a VCC de modulo
 	uint16_t active_pin; // Pin conectado a VCC del modulo
+	uint32_t active_port_periferico; // Periferico de puerto conectado a VCC del modulo
 	GPIO_TypeDef* port; // Puerto de los pines USART
 	uint16_t tx_pin;
 	uint16_t rx_pin;
 	USART_TypeDef * USART;
 	uint8_t alt_fun;
-	IRQn_Type USART_Channel;
 	uint32_t USART_periferico;
-	uint32_t port_periferico;
+	uint32_t USART_port_periferico;
 	uint8_t tx_port_source;
 	uint8_t rx_port_source;
 } BT;
@@ -37,6 +37,7 @@ typedef struct {
 void CE_init_BT(BT bt);
 void CE_send_BT(BT bt, char *content);
 uint8_t CE_read_BT(BT bt, char *buffer);
+void CE_power_off_BT(BT bt);
 
 // Prototipos
 

@@ -1,4 +1,4 @@
-#include "CE_BT_ADC_control.h"
+#include <CE_ADC_control.h>
 
 void CE_ADC_init(ADC_PIN adc) {
     GPIO_InitTypeDef        GPIO_InitStructure;
