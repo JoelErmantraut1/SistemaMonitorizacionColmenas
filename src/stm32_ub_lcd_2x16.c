@@ -21,33 +21,13 @@
 //             PE10 -> LCD_DB7
 //--------------------------------------------------------------
 
+
+
 //--------------------------------------------------------------
 // Includes
 //--------------------------------------------------------------
 #include "stm32_ub_lcd_2x16.h"
 
-/* Defines */
-#define PORT_DISPLAY_RS GPIOB
-#define PORT_DISPLAY_E  GPIOE
-#define PORT_DISPLAY_D4 GPIOE
-#define PORT_DISPLAY_D5 GPIOE
-#define PORT_DISPLAY_D6 GPIOE
-#define PORT_DISPLAY_D7 GPIOC
-// PUERTOS
-#define PIN_DISPLAY_RS GPIO_Pin_8
-#define PIN_DISPLAY_E  GPIO_Pin_5
-#define PIN_DISPLAY_D4 GPIO_Pin_4
-#define PIN_DISPLAY_D5 GPIO_Pin_6
-#define PIN_DISPLAY_D6 GPIO_Pin_2
-#define PIN_DISPLAY_D7 GPIO_Pin_13
-// PINES
-#define PERIPH_DISPLAY_RS RCC_AHB1Periph_GPIOB
-#define PERIPH_DISPLAY_E  RCC_AHB1Periph_GPIOE
-#define PERIPH_DISPLAY_D4 RCC_AHB1Periph_GPIOE
-#define PERIPH_DISPLAY_D5 RCC_AHB1Periph_GPIOE
-#define PERIPH_DISPLAY_D6 RCC_AHB1Periph_GPIOE
-#define PERIPH_DISPLAY_D7 RCC_AHB1Periph_GPIOC
-// PERIFERICOS
 
 
 //--------------------------------------------------------------
@@ -73,14 +53,14 @@ void P_LCD_2x16_Delay(volatile uint32_t nCount);
 //--------------------------------------------------------------
 LCD_2X16_t LCD_2X16[] = {
  // Name   ,PORT , PIN       , CLOCK              , Init
-  {TLCD_RS , PORT_DISPLAY_RS , PIN_DISPLAY_RS , PERIPH_DISPLAY_RS , Bit_RESET},
-  {TLCD_E  , PORT_DISPLAY_E  , PIN_DISPLAY_E  , PERIPH_DISPLAY_E  , Bit_RESET},
-  {TLCD_D4 , PORT_DISPLAY_D4 , PIN_DISPLAY_D4 , PERIPH_DISPLAY_D4 , Bit_RESET},
-  {TLCD_D5 , PORT_DISPLAY_D5 , PIN_DISPLAY_D5 , PERIPH_DISPLAY_D5 , Bit_RESET},
-  {TLCD_D6 , PORT_DISPLAY_D6 , PIN_DISPLAY_D6 , PERIPH_DISPLAY_D6 , Bit_RESET},
-  {TLCD_D7 , PORT_DISPLAY_D7 , PIN_DISPLAY_D7 , PERIPH_DISPLAY_D7 , Bit_RESET},
+  {TLCD_RS ,GPIOB,GPIO_Pin_8 ,RCC_AHB1Periph_GPIOB,Bit_RESET},
+  {TLCD_E  ,GPIOE,GPIO_Pin_5 ,RCC_AHB1Periph_GPIOE,Bit_RESET},
+  {TLCD_D4 ,GPIOE,GPIO_Pin_4 ,RCC_AHB1Periph_GPIOE,Bit_RESET},
+  {TLCD_D5 ,GPIOE,GPIO_Pin_6 ,RCC_AHB1Periph_GPIOE,Bit_RESET},
+  {TLCD_D6 ,GPIOE,GPIO_Pin_2 ,RCC_AHB1Periph_GPIOE,Bit_RESET},
+  {TLCD_D7 ,GPIOC,GPIO_Pin_13,RCC_AHB1Periph_GPIOC,Bit_RESET},
 };
-// ESTO ES LO UNICO QUE HACE FALTA CAMBIAR
+
 
 
 //--------------------------------------------------------------

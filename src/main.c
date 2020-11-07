@@ -82,9 +82,9 @@ Entrada puls_line_entrada_4 = {RCC_AHB1Periph_GPIOC, GPIOC, GPIO_Pin_9};
 
 EXTI_entrada int_infrarrojo1 = {
 		EXTI_PortSourceGPIOB,
-		EXTI_PinSource3,
-		EXTI3_IRQn,
-		EXTI_Line3,
+		EXTI_PinSource4,
+		EXTI4_IRQn,
+		EXTI_Line4,
 		EXTI_Trigger_Rising
 };
 // Asignados de valores a las estructuras a los pulsadores
@@ -146,7 +146,7 @@ int main(void)
     Entrada infrarrojo1 = {
     		RCC_AHB1Periph_GPIOB,
     		GPIOB,
-    		GPIO_Pin_3
+    		GPIO_Pin_4
     };
 
     DHT_Sensor sensor_int;
@@ -155,14 +155,14 @@ int main(void)
 	TIM5_Start(); // Inicializa el timer del DHT.
 
 	sensor_int.num_identificacion = SENSOR_INT;
-	sensor_int.puerto = GPIOD;
-	sensor_int.pin = GPIO_Pin_1;
-	sensor_int.periferico = RCC_AHB1Periph_GPIOD;
+	sensor_int.puerto = GPIOE;
+	sensor_int.pin = GPIO_Pin_10;
+	sensor_int.periferico = RCC_AHB1Periph_GPIOE;
 
 	sensor_ext.num_identificacion = SENSOR_EXT;
-	sensor_ext.puerto = GPIOD;
-	sensor_ext.pin = GPIO_Pin_2;
-	sensor_ext.periferico = RCC_AHB1Periph_GPIOD;
+	sensor_ext.puerto = GPIOE;
+	sensor_ext.pin = GPIO_Pin_11;
+	sensor_ext.periferico = RCC_AHB1Periph_GPIOE;
 
     CE_conf_in(infrarrojo1, GPIO_PuPd_NOPULL);
     CE_EXTI_config(infrarrojo1, int_infrarrojo1);
@@ -174,12 +174,17 @@ int main(void)
 	UB_LCD_2x16_Init();
 	PORT_init();
 
+	UB_LCD_2x16_String(0, 0, "Holaaa");
+
 	SysTick_Config(SystemCoreClock / 1000); // 1ms
 
-	char buffer[20];
-	uint8_t response = CE_read_SD(card, "/exit.txt", buffer);
 	while (1) {
-		// Por ahora, nada
+		// char buffer[20];
+		// uint8_t response = CE_read_SD(card, "/exit.txt", buffer);
+
+		CE_leer_dht(&sensor_int);
+		UB_LCD_2x16_String(0,0, sensor_int.temp_string);
+		UB_LCD_2x16_String(0,1, sensor_int.hum_string); // Texto en la linea 1
 	}
 }
 
@@ -482,7 +487,7 @@ void select_menu_config(char *fila1, char *fila2) {
 	global_puls = NO_BUTTON;
 }
 
-void EXTI3_IRQHandler(void)
+void EXTI4_IRQHandler(void)
 {
 	if(EXTI_GetITStatus(int_infrarrojo1.int_line) != RESET)
 	{
