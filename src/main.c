@@ -1,9 +1,6 @@
 /*
  * Algoritmo principal del proyecto de cuarto año de Ingenieria Electronica
  * que consiste en un sistema de monitorizacion de colmenas.
- *
- * TODO:
- *  - Integrar sensor de temperatura y humedad
  */
 
 // ---------------------------------------------------------------------
@@ -149,6 +146,23 @@ int main(void)
     		GPIO_Pin_4
     };
 
+    BT bt = {
+		GPIOD,
+		GPIO_Pin_14,
+		RCC_AHB1Periph_GPIOD,
+		GPIOA,
+		GPIO_Pin_2,
+		GPIO_Pin_3,
+		USART2,
+		GPIO_AF_USART2,
+		RCC_APB1Periph_USART2,
+		RCC_AHB1Periph_GPIOA,
+		GPIO_PinSource2,
+		GPIO_PinSource3
+    };
+
+    CE_init_BT(bt);
+
     DHT_Sensor sensor_int;
     DHT_Sensor sensor_ext;
 
@@ -185,8 +199,8 @@ int main(void)
 	SysTick_Config(SystemCoreClock / 1000); // 1ms
 
 	while (1) {
-		// char buffer[20];
-		// uint8_t response = CE_read_SD(card, "/exit.txt", buffer);
+		char buffer[20];
+		uint8_t response = CE_read_SD(card, "/exit.txt", buffer);
 
 		CE_leer_dht(&sensor_int);
 		UB_LCD_2x16_String(0,0, sensor_int.temp_string);
@@ -195,6 +209,11 @@ int main(void)
 		CE_leer_dht(&sensor_ext);
 		UB_LCD_2x16_String(0,0, sensor_ext.temp_string);
 		UB_LCD_2x16_String(0,1, sensor_ext.hum_string); // Texto en la linea 1
+
+		CE_send_BT(bt, "r");
+		CE_read_BT(bt, buffer);
+
+		UB_LCD_2x16_String(0, 0, buffer);
 	}
 }
 
