@@ -49,40 +49,24 @@ void CE_conf_out(Salida salida) {
 }
 
 uint8_t CE_pulsador_presionado(
-		Salida puls_line_salida_1,
-		Salida puls_line_salida_2,
 		Entrada puls_line_entrada_1,
-		Entrada puls_line_entrada_2
+		Entrada puls_line_entrada_2,
+		Entrada puls_line_entrada_3,
+		Entrada puls_line_entrada_4
 ) {
-	/*
-	 * Esta funcion considera un keypad o matriz de pulsadores de 4 botones
-	 */
-
-	uint8_t botonApretado = (uint8_t)NO_BUTTON;
-
-	CE_escribir_salida(puls_line_salida_1, 0);
-	CE_escribir_salida(puls_line_salida_2, 1);
-	// Alimentamos una sola fila
-
-	if(CE_leer_entrada(puls_line_entrada_1))
-		botonApretado = (uint8_t)BUTTON_3;
-	else if (CE_leer_entrada(puls_line_entrada_2))
-		botonApretado = (uint8_t)BUTTON_4;
-	// Y aca testeamos cada columna
-
-	CE_escribir_salida(puls_line_salida_1, 1);
-	CE_escribir_salida(puls_line_salida_2, 0);
-	// Dejo de alimentar la primer fila y alimentamos la otra fila
+	uint8_t botonApretado;
 
 	if(CE_leer_entrada(puls_line_entrada_1))
 		botonApretado = (uint8_t)BUTTON_1;
+
 	else if (CE_leer_entrada(puls_line_entrada_2))
 		botonApretado = (uint8_t)BUTTON_2;
-	// Y testeamos las mismas columnas
 
-	CE_escribir_salida(puls_line_salida_1, 1);
-	CE_escribir_salida(puls_line_salida_2, 1);
-	// Vuelvo a alimentar las dos filas para habilitar la interrupcion
+	else if (CE_leer_entrada(puls_line_entrada_3))
+		botonApretado = (uint8_t)BUTTON_3;
+
+	else if (CE_leer_entrada(puls_line_entrada_4))
+		botonApretado = (uint8_t)BUTTON_4;
 
 	return botonApretado;
 }

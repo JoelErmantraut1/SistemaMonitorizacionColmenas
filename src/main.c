@@ -75,10 +75,10 @@ void brilloMuyAlto (void);
 **===========================================================================
 */
 
-Salida puls_line_salida_1 = {RCC_AHB1Periph_GPIOC, GPIOC, GPIO_Pin_9, GPIO_PinSource9};
-Salida puls_line_salida_2 = {RCC_AHB1Periph_GPIOA, GPIOA, GPIO_Pin_8, GPIO_PinSource8};
 Entrada puls_line_entrada_1 = {RCC_AHB1Periph_GPIOC, GPIOC, GPIO_Pin_6};
-Entrada puls_line_entrada_2 = {RCC_AHB1Periph_GPIOC, GPIOC, GPIO_Pin_8};
+Entrada puls_line_entrada_2 = {RCC_AHB1Periph_GPIOC, GPIOC, GPIO_Pin_7};
+Entrada puls_line_entrada_3 = {RCC_AHB1Periph_GPIOC, GPIOC, GPIO_Pin_8};
+Entrada puls_line_entrada_4 = {RCC_AHB1Periph_GPIOC, GPIOC, GPIO_Pin_9};
 
 EXTI_entrada int_infrarrojo1 = {
 		EXTI_PortSourceGPIOB,
@@ -155,14 +155,14 @@ int main(void)
 	TIM5_Start(); // Inicializa el timer del DHT.
 
 	sensor_int.num_identificacion = SENSOR_INT;
-	sensor_int.puerto = GPIOE;
-	sensor_int.pin = GPIO_Pin_9;
-	sensor_int.periferico = RCC_AHB1Periph_GPIOE;
+	sensor_int.puerto = GPIOD;
+	sensor_int.pin = GPIO_Pin_1;
+	sensor_int.periferico = RCC_AHB1Periph_GPIOD;
 
 	sensor_ext.num_identificacion = SENSOR_EXT;
-	sensor_ext.puerto = GPIOE;
-	sensor_ext.pin = GPIO_Pin_10;
-	sensor_ext.periferico = RCC_AHB1Periph_GPIOE;
+	sensor_ext.puerto = GPIOD;
+	sensor_ext.pin = GPIO_Pin_2;
+	sensor_ext.periferico = RCC_AHB1Periph_GPIOD;
 
     CE_conf_in(infrarrojo1, GPIO_PuPd_NOPULL);
     CE_EXTI_config(infrarrojo1, int_infrarrojo1);
@@ -217,12 +217,10 @@ void brilloMuyAlto (void) { ; }
 /* --------------------------------------------------------------------- */
 
 void PORT_init(void) {
-	CE_conf_out(puls_line_salida_1);
-	CE_conf_out(puls_line_salida_2);
-	// Los pines de salida que alimentan las columnas de la matriz de entrada es
-
 	CE_conf_in(puls_line_entrada_1, GPIO_PuPd_DOWN);
 	CE_conf_in(puls_line_entrada_2, GPIO_PuPd_DOWN);
+	CE_conf_in(puls_line_entrada_3, GPIO_PuPd_DOWN);
+	CE_conf_in(puls_line_entrada_4, GPIO_PuPd_DOWN);
 	// Los pines de entradas, que despues se configuran con interrupciones
 }
 
@@ -238,10 +236,10 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 		contSystick=0;
 	} else if (contSystick % T_PULSADORES == 0) {
 		global_puls = CE_pulsador_presionado(
-				puls_line_salida_1,
-				puls_line_salida_2,
 				puls_line_entrada_1,
-				puls_line_entrada_2
+				puls_line_entrada_2,
+				puls_line_entrada_3,
+				puls_line_entrada_4
 		);
 	}
 }

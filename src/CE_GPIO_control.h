@@ -36,10 +36,10 @@ void CE_conf_out(Salida salida);
 uint8_t CE_leer_entrada(Entrada entrada);
 void CE_escribir_salida(Salida salida, uint8_t state);
 uint8_t CE_pulsador_presionado(
-		Salida puls_line_salida_1,
-		Salida puls_line_salida_2,
 		Entrada puls_line_entrada_1,
-		Entrada puls_line_entrada_2
+		Entrada puls_line_entrada_2,
+		Entrada puls_line_entrada_3,
+		Entrada puls_line_entrada_4
 );
 
 // Prototipos
