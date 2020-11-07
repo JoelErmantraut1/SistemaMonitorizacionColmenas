@@ -72,6 +72,27 @@ void brilloMuyAlto (void);
 **===========================================================================
 */
 
+Salida led_bateria1 = {
+	RCC_AHB1Periph_GPIOE,
+	GPIOE,
+	GPIO_Pin_7,
+	GPIO_PinSource7
+};
+
+Salida led_bateria2 = {
+	RCC_AHB1Periph_GPIOE,
+	GPIOE,
+	GPIO_Pin_9,
+	GPIO_PinSource8
+};
+
+Salida led_bateria3 = {
+	RCC_AHB1Periph_GPIOE,
+	GPIOE,
+	GPIO_Pin_11,
+	GPIO_PinSource11
+};
+
 Entrada puls_line_entrada_1 = {RCC_AHB1Periph_GPIOC, GPIOC, GPIO_Pin_6};
 Entrada puls_line_entrada_2 = {RCC_AHB1Periph_GPIOC, GPIOC, GPIO_Pin_7};
 Entrada puls_line_entrada_3 = {RCC_AHB1Periph_GPIOC, GPIOC, GPIO_Pin_8};
@@ -232,6 +253,14 @@ int main(void)
 		CE_read_BT(bt, buffer);
 		UB_LCD_2x16_String(0, 0, buffer);
 		*/
+
+		CE_escribir_salida(led_bateria1, 1);
+		CE_escribir_salida(led_bateria2, 1);
+		CE_escribir_salida(led_bateria3, 1);
+
+		CE_escribir_salida(led_bateria1, 0);
+		CE_escribir_salida(led_bateria2, 0);
+		CE_escribir_salida(led_bateria3, 0);
 	}
 }
 
@@ -273,7 +302,12 @@ void PORT_init(void) {
 	CE_conf_in(puls_line_entrada_2, GPIO_PuPd_DOWN);
 	CE_conf_in(puls_line_entrada_3, GPIO_PuPd_DOWN);
 	CE_conf_in(puls_line_entrada_4, GPIO_PuPd_DOWN);
-	// Los pines de entradas, que despues se configuran con interrupciones
+	// Pines de entrada del keypad de pulsadores tactiles
+
+    CE_conf_out(led_bateria1);
+    CE_conf_out(led_bateria2);
+    CE_conf_out(led_bateria3);
+    // LEDs que marcan el estado actual de la bateria
 }
 
 void controlador_systick(void) { // Esta funcion es llamada en la interrupcion del SysTick
