@@ -84,6 +84,13 @@ EXTI_entrada int_infrarrojo1 = {
 		EXTI_Line4,
 		EXTI_Trigger_Rising
 };
+EXTI_entrada int_infrarrojo2 = {
+		EXTI_PortSourceGPIOB,
+		EXTI_PinSource5,
+		EXTI9_5_IRQn,
+		EXTI_Line5,
+		EXTI_Trigger_Rising
+};
 // Asignados de valores a las estructuras a los pulsadores
 uint8_t global_puls, last_global_puls, pantalla = 0, level = 0, menu = 0, pantalla_int = 4;
 // Variable que almacena el indicador del ultimo pulsador presionado
@@ -146,6 +153,12 @@ int main(void)
     		GPIO_Pin_4
     };
 
+    Entrada infrarrojo2 = {
+    		RCC_AHB1Periph_GPIOB,
+    		GPIOB,
+    		GPIO_Pin_5
+    };
+
     BT bt = {
 		GPIOD,
 		GPIO_Pin_14,
@@ -186,6 +199,10 @@ int main(void)
 
     CE_conf_in(infrarrojo1, GPIO_PuPd_NOPULL);
     CE_EXTI_config(infrarrojo1, int_infrarrojo1);
+    // Primer infrarrojo
+    CE_conf_in(infrarrojo2, GPIO_PuPd_NOPULL);
+    CE_EXTI_config(infrarrojo2, int_infrarrojo2);
+    // Segundo infrarrojo
 
 	SystemInit();
 
@@ -199,6 +216,7 @@ int main(void)
 	SysTick_Config(SystemCoreClock / 1000); // 1ms
 
 	while (1) {
+		/*
 		char buffer[20];
 		uint8_t response = CE_read_SD(card, "/exit.txt", buffer);
 
@@ -212,8 +230,8 @@ int main(void)
 
 		CE_send_BT(bt, "r");
 		CE_read_BT(bt, buffer);
-
 		UB_LCD_2x16_String(0, 0, buffer);
+		*/
 	}
 }
 
@@ -523,15 +541,21 @@ void EXTI4_IRQHandler(void)
 		static int state = 0;
 		state = !state;
 
-		UB_LCD_2x16_Clear();
-		if (state) {
-			UB_LCD_2x16_String(0, 0, "Tapado 1");
-		} else {
-			UB_LCD_2x16_String(0, 0, "NO Tapado 1");
-		}
-
 		CE_EXTI_change_trigger(int_infrarrojo1);
 
 		EXTI_ClearITPendingBit(int_infrarrojo1.int_line);
+	}
+}
+
+void EXTI9_5_IRQHandler(void)
+{
+	if(EXTI_GetITStatus(int_infrarrojo2.int_line) != RESET)
+	{
+		static int state = 0;
+		state = !state;
+
+		CE_EXTI_change_trigger(int_infrarrojo2);
+
+		EXTI_ClearITPendingBit(int_infrarrojo2.int_line);
 	}
 }
