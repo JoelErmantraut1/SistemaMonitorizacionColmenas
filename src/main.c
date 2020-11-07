@@ -152,17 +152,23 @@ int main(void)
     DHT_Sensor sensor_int;
     DHT_Sensor sensor_ext;
 
-	TIM5_Start(); // Inicializa el timer del DHT.
+	CE_DHT11_TIM5_Start(); // Inicializa el timer del DHT.
 
 	sensor_int.num_identificacion = SENSOR_INT;
 	sensor_int.puerto = GPIOE;
 	sensor_int.pin = GPIO_Pin_10;
 	sensor_int.periferico = RCC_AHB1Periph_GPIOE;
+	sensor_int.temp_entero = 0;
+	sensor_int.temp_decimal = 0;
+	sensor_int.humedad = 0;
 
 	sensor_ext.num_identificacion = SENSOR_EXT;
 	sensor_ext.puerto = GPIOE;
 	sensor_ext.pin = GPIO_Pin_11;
 	sensor_ext.periferico = RCC_AHB1Periph_GPIOE;
+	sensor_int.temp_entero = 0;
+	sensor_int.temp_decimal = 0;
+	sensor_int.humedad = 0;
 
     CE_conf_in(infrarrojo1, GPIO_PuPd_NOPULL);
     CE_EXTI_config(infrarrojo1, int_infrarrojo1);
@@ -185,6 +191,10 @@ int main(void)
 		CE_leer_dht(&sensor_int);
 		UB_LCD_2x16_String(0,0, sensor_int.temp_string);
 		UB_LCD_2x16_String(0,1, sensor_int.hum_string); // Texto en la linea 1
+
+		CE_leer_dht(&sensor_ext);
+		UB_LCD_2x16_String(0,0, sensor_ext.temp_string);
+		UB_LCD_2x16_String(0,1, sensor_ext.hum_string); // Texto en la linea 1
 	}
 }
 

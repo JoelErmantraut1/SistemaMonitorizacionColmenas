@@ -86,6 +86,7 @@ void CE_leer_dht(DHT_Sensor *sensor)
 	Temp_byte2 = read_data(*sensor);
 	sum = read_data(*sensor);
 
+
 	if (sum == (Rh_byte1+Rh_byte2+Temp_byte1+Temp_byte2)) {
 		if(sensor->num_identificacion == SENSOR_INT) {
 			sprintf(aux,"Tint: %d.%d %cC",Temp_byte1,Temp_byte2,223); // Se crea una cadena con la temperatura.
@@ -93,6 +94,11 @@ void CE_leer_dht(DHT_Sensor *sensor)
 
 			sprintf(aux,"Hint: %d %%",Rh_byte1);
 			strcpy(sensor->hum_string,aux);
+
+			sensor->temp_entero = Temp_byte1;
+			sensor->temp_decimal = Temp_byte2;
+			sensor->humedad = Rh_byte1;
+
 			sensor->estado = STATE_DHT_CHECKSUM_GOOD; // Se cambia el estado del sensor.
 		} else if (sensor->num_identificacion == SENSOR_EXT) {
 			sprintf(aux,"Text: %d.%d %cC",Temp_byte1,Temp_byte2,223); // Se crea una cadena con la temperatura.
@@ -100,6 +106,11 @@ void CE_leer_dht(DHT_Sensor *sensor)
 
 			sprintf(aux,"Hext: %d %%",Rh_byte1);
 			strcpy(sensor->hum_string,aux);
+
+			sensor->temp_entero = Temp_byte1;
+			sensor->temp_decimal = Temp_byte2;
+			sensor->humedad = Rh_byte1;
+
 			sensor->estado = STATE_DHT_CHECKSUM_GOOD; // Se cambia el estado del sensor.
 		}
 	} else {
@@ -170,7 +181,7 @@ void TIM5_Config(void)
 
 }
 
-void TIM5_Start(void)
+void CE_DHT11_TIM5_Start(void)
 {
 	/*
 	 *	TIMX_Start deja el timer X ready to go.

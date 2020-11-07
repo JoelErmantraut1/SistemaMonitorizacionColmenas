@@ -27,12 +27,15 @@ typedef struct
 	GPIO_TypeDef* puerto;
 	uint16_t pin;
 	uint8_t periferico;
+	int temp_entero;
+	int temp_decimal;
+	int humedad;
 }DHT_Sensor;
 
 // Estructuras
 
 void TIM5_Init(void);
-void TIM5_Start(void);
+void CE_DHT11_TIM5_Start(void);
 void TIM5_Config(void);
 void TIM5_IRQHandler(void);
 void delay(uint32_t tiempo);          // delay en micro segundos
