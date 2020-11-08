@@ -54,7 +54,7 @@ uint8_t CE_pulsador_presionado(
 		Entrada puls_line_entrada_3,
 		Entrada puls_line_entrada_4
 ) {
-	uint8_t botonApretado;
+	uint8_t botonApretado = NO_BUTTON;
 
 	if(CE_leer_entrada(puls_line_entrada_1))
 		botonApretado = (uint8_t)BUTTON_1;

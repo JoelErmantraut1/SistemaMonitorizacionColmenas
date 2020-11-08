@@ -184,6 +184,8 @@ uint32_t infra_delay1 = 0, infra_delay2 = 0;
 // Variable que actua para evitar el rebote de los infrarrojos
 uint32_t carga_bateria = 0;
 // Variable para ver la carga actual de la bateria
+uint16_t inactividad = 0;
+// Variable que registra si se ha presionado pulsadores en el ultimo minuto
 
 const char *mediciones[][3] = {
     {"Exterior", "Temp:", "Hum:"},
@@ -256,11 +258,7 @@ float crono_hora() { return 43.34; }
 void activar_bluetooth (void) { ; }
 void desactivar_bluetooth (void) { ; }
 void muestrear_hora (void)  {; }
-void muestrear_Min (void) { ; }
-void brilloBajo (void) { ; }
-void brilloMuyBajo (void) { ; }
-void brilloAlto (void) { ; }
-void brilloMuyAlto (void) { ; }
+void muestrear_min (void) { ; }
 // Funciones de la configuracion
 
 /* --------------------------------------------------------------------- */
@@ -310,6 +308,18 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 				puls_line_entrada_3,
 				puls_line_entrada_4
 		);
+		if (global_puls == NO_BUTTON) {
+			++inactividad;
+			if (inactividad >= 600) {
+				// No hubo actividad en los ultimos 60 segundos
+				inactividad = 0;
+				brilloMuyBajo();
+				// Pone el brillo del display al minimo
+			}
+		} else {
+			 inactividad = 0;
+			 // ACA AGREGAR EL BRILLO CONFIGURADO
+		}
 	} else if (contSystick % BT_CHECK_TIME == 0) {
 		if (CE_read_BT(bt, &BT_buffer)) BT_sender();
 	}
@@ -511,7 +521,7 @@ void select_menu_config(char *fila1, char *fila2) {
 		}
 		if (pantalla_int == 1 && last_global_puls == BUTTON_2)
 		{
-			muestrear_Min();
+			muestrear_min();
 			level = 2;
 			pantalla_int = 4;
 
@@ -553,67 +563,10 @@ void select_menu_config(char *fila1, char *fila2) {
 	global_puls = NO_BUTTON;
 }
 
-float medir_temp_ext(){
-	float aux_entero;
-	float aux_frac;
-	float resultado;
-
-	aux_entero = (float) sensor_ext.temp_entero;
-	aux_frac = (float) sensor_ext.temp_decimal;
-	resultado = (float)(aux_entero + (aux_frac/10));
-
-	return resultado;
-}
-
-float medir_temp_int(){
-	float aux_entero;
-	float aux_frac;
-	float resultado;
-
-	aux_entero = (float) sensor_ext.temp_entero;
-	aux_frac = (float)sensor_ext.temp_decimal;
-	resultado = (float)(aux_entero + (aux_frac/10));
-
-	return resultado;
-}
-
-float medir_hum_ext(){
-	int aux_entero;
-	float resultado;
-
-	aux_entero = sensor_ext.humedad;
-	resultado = (float)(aux_entero);
-
-	return resultado;
-}
-
-float medir_hum_int(){
-	int aux_entero;
-	float resultado;
-
-	aux_entero = sensor_int.humedad;
-	resultado = (float)(aux_entero);
-
-	return resultado;
-}
-
-float ver_ingresos() {
-	return (float) ingresos;
-}
-float ver_egresos() {
-	return (float) egresos;
-}
-
-float carga_bateria_porcentaje() {
-	return ((float) carga_bateria / MAX_ADC_VALUE) * 100.0;
-}
-float carga_bateria_tension() {
-	return ((float) carga_bateria / MAX_ADC_VALUE) * MAX_ADC_VOLTS;
-}
-
-float calcular_diferencia() {
-	return (float) abs(ingresos - egresos);
-}
+/* --------------------------------------------------------------------- */
+/* ------------------------  OTRAS FUNCIONES	------------------------ */
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
 
 void BT_sender() {
 	/*
@@ -677,6 +630,96 @@ void LEDs_indicadores(uint32_t carga) {
 	if (porcentaje > 90)
 		CE_escribir_salida(led_bateria3, 1);
 }
+
+/* --------------------------------------------------------------------- */
+/* --------------------- 	FUNCIONES "MEDICION" 	-------------------- */
+/* ---------------	FNS DEL APARTADO "MEDICIONES" DEL MENU	------------ */
+/* --------------------------------------------------------------------- */
+
+float medir_temp_ext(){
+	float aux_entero;
+	float aux_frac;
+	float resultado;
+
+	aux_entero = (float) sensor_ext.temp_entero;
+	aux_frac = (float) sensor_ext.temp_decimal;
+	resultado = (float)(aux_entero + (aux_frac/10));
+
+	return resultado;
+}
+
+float medir_temp_int(){
+	float aux_entero;
+	float aux_frac;
+	float resultado;
+
+	aux_entero = (float) sensor_ext.temp_entero;
+	aux_frac = (float)sensor_ext.temp_decimal;
+	resultado = (float)(aux_entero + (aux_frac/10));
+
+	return resultado;
+}
+
+float medir_hum_ext(){
+	int aux_entero;
+	float resultado;
+
+	aux_entero = sensor_ext.humedad;
+	resultado = (float)(aux_entero);
+
+	return resultado;
+}
+
+float medir_hum_int(){
+	int aux_entero;
+	float resultado;
+
+	aux_entero = sensor_int.humedad;
+	resultado = (float)(aux_entero);
+
+	return resultado;
+}
+
+float ver_ingresos() {
+	return (float) ingresos;
+}
+float ver_egresos() {
+	return (float) egresos;
+}
+
+float carga_bateria_porcentaje() {
+	return ((float) carga_bateria / MAX_ADC_VALUE) * 100.0;
+}
+float carga_bateria_tension() {
+	return ((float) carga_bateria / MAX_ADC_VALUE) * MAX_ADC_VOLTS;
+}
+
+float calcular_diferencia() {
+	return (float) abs(ingresos - egresos);
+}
+
+/* --------------------------------------------------------------------- */
+/* ------------------- 	FUNCIONES "CONFIGURACION" 	-------------------- */
+/* ----------   FNS DEL APARTADO "CONFIGURACION" DEL MENU	------------ */
+/* --------------------------------------------------------------------- */
+
+void brilloMuyBajo (void) {
+	CE_PMW_change_duty(pwm, 10);
+}
+void brilloBajo (void) {
+	CE_PMW_change_duty(pwm, 50);
+}
+void brilloAlto (void) {
+	CE_PMW_change_duty(pwm, 75);
+}
+void brilloMuyAlto (void) {
+	CE_PMW_change_duty(pwm, 100);
+}
+
+/* --------------------------------------------------------------------- */
+/* ------------------------   INTERRUPCIONES   ------------------------- */
+/* --------------------------------------------------------------------- */
+/* --------------------------------------------------------------------- */
 
 void EXTI4_IRQHandler(void)
 {

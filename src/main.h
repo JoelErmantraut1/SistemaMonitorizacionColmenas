@@ -71,7 +71,7 @@ float crono_hora();
 void activar_bluetooth (void);
 void desactivar_bluetooth (void);
 void muestrear_hora (void);
-void muestrear_Min (void);
+void muestrear_min (void);
 void brilloBajo (void);
 void brilloMuyBajo (void);
 void brilloAlto (void);
