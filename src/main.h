@@ -17,8 +17,13 @@
 #define MIN_ADC_VALUE			0.0f	 // Valor para el 0% de bateria
 // Indentificadores para la carga de la bateria
 #define MAX_ADC_VOLTS			2.9f
+// Maxima tension que mide el ADC
+#define	INFRA_DELAY_LIMIT		100
+// Limite para el antirrebote de los sensores de proximidad
 
 /* Librerias */
+#include <math.h>
+// Librerias estandar de C
 #include "stm32_ub_lcd_2x16.h"
 // Librerias de terceros
 #include "CE_GPIO_control.h"

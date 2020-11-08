@@ -14,22 +14,22 @@
 */
 
 Salida led_bateria1 = {
-	RCC_AHB1Periph_GPIOE,
-	GPIOE,
-	GPIO_Pin_7,
-	GPIO_PinSource7
+		RCC_AHB1Periph_GPIOE,
+		GPIOE,
+		GPIO_Pin_7,
+		GPIO_PinSource7
 };
 Salida led_bateria2 = {
-	RCC_AHB1Periph_GPIOE,
-	GPIOE,
-	GPIO_Pin_8,
-	GPIO_PinSource8
+		RCC_AHB1Periph_GPIOE,
+		GPIOE,
+		GPIO_Pin_8,
+		GPIO_PinSource8
 };
 Salida led_bateria3 = {
-	RCC_AHB1Periph_GPIOE,
-	GPIOE,
-	GPIO_Pin_9,
-	GPIO_PinSource9
+		RCC_AHB1Periph_GPIOE,
+		GPIOE,
+		GPIO_Pin_9,
+		GPIO_PinSource9
 };
 
 Salida salida_pwm = {
@@ -140,18 +140,18 @@ SD_Card card = {
 // Temperatura, humedad y salud de las abejas
 
 BT bt = {
-	GPIOD,
-	GPIO_Pin_14,
-	RCC_AHB1Periph_GPIOD,
-	GPIOA,
-	GPIO_Pin_2,
-	GPIO_Pin_3,
-	USART2,
-	GPIO_AF_USART2,
-	RCC_APB1Periph_USART2,
-	RCC_AHB1Periph_GPIOA,
-	GPIO_PinSource2,
-	GPIO_PinSource3
+		GPIOD,
+		GPIO_Pin_14,
+		RCC_AHB1Periph_GPIOD,
+		GPIOA,
+		GPIO_Pin_2,
+		GPIO_Pin_3,
+		USART2,
+		GPIO_AF_USART2,
+		RCC_APB1Periph_USART2,
+		RCC_AHB1Periph_GPIOA,
+		GPIO_PinSource2,
+		GPIO_PinSource3
 };
 
 // Modulo Bluetooth para comunicacion con dipositivo movil
@@ -180,13 +180,15 @@ uint8_t direccion = 0;
 uint32_t ingresos = 0;
 uint32_t egresos = 0;
 // Contadores de cantidades de abejas que ingresaron y egresaron
+uint32_t infra_delay1 = 0, infra_delay2 = 0;
+// Variable que actua para evitar el rebote de los infrarrojos
 uint32_t carga_bateria = 0;
 // Variable para ver la carga actual de la bateria
 
 const char *mediciones[][3] = {
     {"Exterior", "Temp:", "Hum:"},
     {"Interior", "Temp:", "Hum:"},
-    {"Carga de bat.", "Porce:", "Tension:"},
+    {"Carga de bat.", "Porc:", "Tension:"},
     {"Ing. y Egr.", "Ingresos:", "Egresos:"},
     {"Diferencia", "Diferencia:", "Promedio:"},
     {"Cronometro", "Dia:", "Hora:"}
@@ -247,7 +249,6 @@ int main(void)
 /* -------- ESTAS NO SON LAS FNS QUE VAMOS A USAR EN EL PROYECTO ------- */
 /* --------------------------------------------------------------------- */
 
-float calcular_diferencia() { return 0; }
 float calcular_dif_prom() { return 99.0; }
 float crono_dia() { return 23.17; }
 float crono_hora() { return 43.34; }
@@ -291,6 +292,8 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 	static int contSystick = 0;
 
 	++contSystick;
+	++infra_delay1;
+	++infra_delay2;
 
 	if (contSystick % BATTERY_CHECK == 0) {
 		carga_bateria = CE_ADC_read(battery_adc);
@@ -608,6 +611,10 @@ float carga_bateria_tension() {
 	return ((float) carga_bateria / MAX_ADC_VALUE) * MAX_ADC_VOLTS;
 }
 
+float calcular_diferencia() {
+	return (float) abs(ingresos - egresos);
+}
+
 void BT_sender() {
 	/*
 	 * Para cada caracter que le llega genera una cadena
@@ -673,14 +680,14 @@ void LEDs_indicadores(uint32_t carga) {
 
 void EXTI4_IRQHandler(void)
 {
-	if(EXTI_GetITStatus(int_infrarrojo1.int_line) != RESET)
+	if(EXTI_GetITStatus(int_infrarrojo1.int_line) != RESET && infra_delay1 >= INFRA_DELAY_LIMIT)
 	{
 		if (direccion == 2) {
 			direccion = 0;
 			egresos++;
 		} else direccion = 1;
 
-		// CE_EXTI_change_trigger(int_infrarrojo1);
+		infra_delay1 = 0;
 
 		EXTI_ClearITPendingBit(int_infrarrojo1.int_line);
 	}
@@ -688,14 +695,14 @@ void EXTI4_IRQHandler(void)
 
 void EXTI9_5_IRQHandler(void)
 {
-	if(EXTI_GetITStatus(int_infrarrojo2.int_line) != RESET)
+	if(EXTI_GetITStatus(int_infrarrojo2.int_line) != RESET && infra_delay2 >= INFRA_DELAY_LIMIT)
 	{
 		if (direccion == 1) {
 			direccion = 0;
 			ingresos++;
 		} else direccion = 2;
 
-		// CE_EXTI_change_trigger(int_infrarrojo2);
+		infra_delay2 = 0;
 
 		EXTI_ClearITPendingBit(int_infrarrojo2.int_line);
 	}
