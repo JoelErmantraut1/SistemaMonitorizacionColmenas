@@ -7,6 +7,7 @@
 // Librerias
 
 void CE_print(char *buffer, const char* text, float num);
+void CE_format_float(float num, char *buffer);
 
 // Prototipos
 

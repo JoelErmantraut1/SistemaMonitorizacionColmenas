@@ -9,9 +9,14 @@
 // ---------------------------------------------------------------------
 #define T_REFRESH_DISPLAY		250
 #define	T_PULSADORES			100
-// Cantidad de ms entre refrescos del display
+#define T_SENSORES				2500
+#define BT_CHECK_TIME			20
+// Cantidad de us entre las diferentes funciones dentro del SysTick
 #define SENSOR_INT				1
 #define SENSOR_EXT				2
+// Identificadores de sensores
+#define MAX_CHAR_LCD			17
+// Cantidad maxima de caracteres para cadenas
 
 /* Librerias */
 #include "stm32_ub_lcd_2x16.h"
@@ -35,7 +40,12 @@ void PORT_init(void);
 void refrescoDisplay(void);
 void select_menu(char *fila1, char *fila2);
 void select_menu_config(char *fila1, char *fila2);
-void EXTI3_IRQHandler(void);
+// Relacionado al menu
+void EXTI4_IRQHandler(void);
+void EXTI9_5_IRQHandler(void);
+// Para los sensores infrarrojos
+void BT_sender();
+// Funciones BT
 
 /* FNS REPRESENTATIVAS */
 float medir_temp_ext();
@@ -67,7 +77,7 @@ void brilloMuyAlto (void);
 /**
 **===========================================================================
 **
-**  Abstract: main program
+**  Estructuras de los componentes
 **
 **===========================================================================
 */
@@ -78,14 +88,12 @@ Salida led_bateria1 = {
 	GPIO_Pin_7,
 	GPIO_PinSource7
 };
-
 Salida led_bateria2 = {
 	RCC_AHB1Periph_GPIOE,
 	GPIOE,
 	GPIO_Pin_9,
 	GPIO_PinSource8
 };
-
 Salida led_bateria3 = {
 	RCC_AHB1Periph_GPIOE,
 	GPIOE,
@@ -93,10 +101,42 @@ Salida led_bateria3 = {
 	GPIO_PinSource11
 };
 
+Salida salida_pwm = {
+		RCC_AHB1Periph_GPIOD,
+		GPIOD,
+		GPIO_Pin_12,
+		GPIO_PinSource12
+};
+PWM pwm = {
+		RCC_APB1Periph_TIM4,
+		8399,
+		TIM4,
+		TIM_OCMode_PWM2
+};
+// PWM para controlar el brillo del LCD
+
+// LEDs que reflejan la carga de la bateria
+
 Entrada puls_line_entrada_1 = {RCC_AHB1Periph_GPIOC, GPIOC, GPIO_Pin_6};
 Entrada puls_line_entrada_2 = {RCC_AHB1Periph_GPIOC, GPIOC, GPIO_Pin_7};
 Entrada puls_line_entrada_3 = {RCC_AHB1Periph_GPIOC, GPIOC, GPIO_Pin_8};
 Entrada puls_line_entrada_4 = {RCC_AHB1Periph_GPIOC, GPIOC, GPIO_Pin_9};
+
+// Pulsadores de entrada
+
+Entrada infrarrojo1 = {
+		RCC_AHB1Periph_GPIOB,
+		GPIOB,
+		GPIO_Pin_4
+};
+
+Entrada infrarrojo2 = {
+		RCC_AHB1Periph_GPIOB,
+		GPIOB,
+		GPIO_Pin_5
+};
+
+// Infrarrojos para detectar entrada o salida de abejas
 
 EXTI_entrada int_infrarrojo1 = {
 		EXTI_PortSourceGPIOB,
@@ -112,9 +152,92 @@ EXTI_entrada int_infrarrojo2 = {
 		EXTI_Line5,
 		EXTI_Trigger_Rising
 };
-// Asignados de valores a las estructuras a los pulsadores
+
+// Lineas de interrupcion por entradas
+
+DHT_Sensor sensor_int = {
+		"",
+		"",
+		0,
+		0,
+		SENSOR_INT,
+		GPIOE,
+		GPIO_Pin_10,
+		RCC_AHB1Periph_GPIOE,
+		0,
+		0,
+		0
+};
+DHT_Sensor sensor_ext = {
+		"",
+		"",
+		0,
+		0,
+		SENSOR_EXT,
+		GPIOE,
+		GPIO_Pin_11,
+		RCC_AHB1Periph_GPIOE,
+		0,
+		0,
+		0
+};
+
+// Sensores de temperatura y humedad, interno y externo
+
+ADC_PIN adc = {
+		GPIOC,
+		GPIO_Pin_2,
+		RCC_AHB1Periph_GPIOC,
+		RCC_APB2Periph_ADC2,
+		ADC2,
+		ADC_InjectedChannel_1,
+		ADC_Channel_12
+};
+
+// ADC para medir la carga de la bateria
+
+SD_Card card = {
+		"/",
+		"/temp.txt",
+		"/hum.txt",
+		"/health.txt"
+};
+
+// Tarjeta de memoria SD
+// Maneja un archivo por cada dato relevante a medir
+// Temperatura, humedad y salud de las abejas
+
+BT bt = {
+	GPIOD,
+	GPIO_Pin_14,
+	RCC_AHB1Periph_GPIOD,
+	GPIOA,
+	GPIO_Pin_2,
+	GPIO_Pin_3,
+	USART2,
+	GPIO_AF_USART2,
+	RCC_APB1Periph_USART2,
+	RCC_AHB1Periph_GPIOA,
+	GPIO_PinSource2,
+	GPIO_PinSource3
+};
+
+// Modulo Bluetooth para comunicacion con dipositivo movil
+
+/**
+**===========================================================================
+**
+**  Variables globales
+**
+**===========================================================================
+*/
+
 uint8_t global_puls, last_global_puls, pantalla = 0, level = 0, menu = 0, pantalla_int = 4;
-// Variable que almacena el indicador del ultimo pulsador presionado
+// Variables globales para el menu
+char BT_buffer;
+int BT_ready = 0;
+// Variables globales para BT
+
 const char *mediciones[][3] = {
     {"Exterior", "Temp:", "Hum:"},
     {"Interior", "Temp:", "Hum:"},
@@ -125,142 +248,63 @@ const char *mediciones[][3] = {
 };
 
 float (*fn[][2])(void) = {
-    {medir_temp_ext, medir_temp_int},
-    {medir_hum_ext, medir_hum_int},
+    {medir_temp_ext, medir_hum_ext},
+    {medir_temp_int, medir_hum_int},
     {carga_bateria_porcentaje, carga_bateria_tension},
     {ver_ingresos, ver_egresos},
     {calcular_diferencia, calcular_dif_prom},
     {crono_dia, crono_hora}
 };
-// Arreglos de dos funciones
+// Arreglos de dos funciones por fila
 // Almacena las funciones de cada "pestaña" del menu
+
+/**
+**===========================================================================
+**
+**  Programa principal y funciones
+**
+**===========================================================================
+*/
 
 int main(void)
 {
-	ADC_PIN adc = {
-			GPIOC,
-			GPIO_Pin_2,
-			RCC_AHB1Periph_GPIOC,
-			RCC_APB2Periph_ADC2,
-			ADC2,
-			ADC_InjectedChannel_1,
-			ADC_Channel_12
-	};
+	SystemInit();
 
-	PWM pwm = {
-			RCC_APB1Periph_TIM4,
-			8399,
-			TIM4,
-			TIM_OCMode_PWM2
-	};
-
-	Salida salida_pwm = {
-			RCC_AHB1Periph_GPIOD,
-			GPIOD,
-			GPIO_Pin_12,
-			GPIO_PinSource12
-	};
-
-    SD_Card card = {
-    		"/",
-			"/temp.txt",
-			"/hum.txt",
-			"/health.txt"
-    };
-
-    Entrada infrarrojo1 = {
-    		RCC_AHB1Periph_GPIOB,
-    		GPIOB,
-    		GPIO_Pin_4
-    };
-
-    Entrada infrarrojo2 = {
-    		RCC_AHB1Periph_GPIOB,
-    		GPIOB,
-    		GPIO_Pin_5
-    };
-
-    BT bt = {
-		GPIOD,
-		GPIO_Pin_14,
-		RCC_AHB1Periph_GPIOD,
-		GPIOA,
-		GPIO_Pin_2,
-		GPIO_Pin_3,
-		USART2,
-		GPIO_AF_USART2,
-		RCC_APB1Periph_USART2,
-		RCC_AHB1Periph_GPIOA,
-		GPIO_PinSource2,
-		GPIO_PinSource3
-    };
+	PORT_init();
 
     CE_init_BT(bt);
 
-    DHT_Sensor sensor_int;
-    DHT_Sensor sensor_ext;
-
-	CE_DHT11_TIM5_Start(); // Inicializa el timer del DHT.
-
-	sensor_int.num_identificacion = SENSOR_INT;
-	sensor_int.puerto = GPIOE;
-	sensor_int.pin = GPIO_Pin_10;
-	sensor_int.periferico = RCC_AHB1Periph_GPIOE;
-	sensor_int.temp_entero = 0;
-	sensor_int.temp_decimal = 0;
-	sensor_int.humedad = 0;
-
-	sensor_ext.num_identificacion = SENSOR_EXT;
-	sensor_ext.puerto = GPIOE;
-	sensor_ext.pin = GPIO_Pin_11;
-	sensor_ext.periferico = RCC_AHB1Periph_GPIOE;
-	sensor_int.temp_entero = 0;
-	sensor_int.temp_decimal = 0;
-	sensor_int.humedad = 0;
-
-    CE_conf_in(infrarrojo1, GPIO_PuPd_NOPULL);
-    CE_EXTI_config(infrarrojo1, int_infrarrojo1);
-    // Primer infrarrojo
-    CE_conf_in(infrarrojo2, GPIO_PuPd_NOPULL);
-    CE_EXTI_config(infrarrojo2, int_infrarrojo2);
-    // Segundo infrarrojo
-
-	SystemInit();
+	CE_DHT11_TIM5_Start(); // Inicializa el timer del DHT
 
     CE_ADC_init(adc);
     CE_PWM_init(salida_pwm, pwm);
+    CE_PMW_change_duty(pwm, 10);
 	UB_LCD_2x16_Init();
-	PORT_init();
 
-	UB_LCD_2x16_String(0, 0, "Holaaa");
+	SysTick_Config(SystemCoreClock / 1000);
 
-	SysTick_Config(SystemCoreClock / 1000); // 1ms
+	/*
+	char buffer[20];
+	uint8_t response = CE_read_SD(card, "/exit.txt", buffer);
+
+	CE_leer_dht(&sensor_int);
+	UB_LCD_2x16_String(0,0, sensor_int.temp_string);
+	UB_LCD_2x16_String(0,1, sensor_int.hum_string); // Texto en la linea 1
+
+	CE_leer_dht(&sensor_ext);
+	UB_LCD_2x16_String(0,0, sensor_ext.temp_string);
+	UB_LCD_2x16_String(0,1, sensor_ext.hum_string); // Texto en la linea 1
+
+	CE_send_BT(bt, "r");
+	CE_read_BT(bt, buffer);
+	UB_LCD_2x16_String(0, 0, buffer);
+	*/
 
 	while (1) {
-		/*
-		char buffer[20];
-		uint8_t response = CE_read_SD(card, "/exit.txt", buffer);
-
-		CE_leer_dht(&sensor_int);
-		UB_LCD_2x16_String(0,0, sensor_int.temp_string);
-		UB_LCD_2x16_String(0,1, sensor_int.hum_string); // Texto en la linea 1
-
-		CE_leer_dht(&sensor_ext);
-		UB_LCD_2x16_String(0,0, sensor_ext.temp_string);
-		UB_LCD_2x16_String(0,1, sensor_ext.hum_string); // Texto en la linea 1
-
-		CE_send_BT(bt, "r");
-		CE_read_BT(bt, buffer);
-		UB_LCD_2x16_String(0, 0, buffer);
-		*/
-
-		CE_escribir_salida(led_bateria1, 1);
-		CE_escribir_salida(led_bateria2, 1);
-		CE_escribir_salida(led_bateria3, 1);
-
-		CE_escribir_salida(led_bateria1, 0);
-		CE_escribir_salida(led_bateria2, 0);
-		CE_escribir_salida(led_bateria3, 0);
+		if (BT_ready) {
+			BT_sender();
+			BT_ready = 0;
+		}
 	}
 }
 
@@ -269,10 +313,6 @@ int main(void)
 /* -------- ESTAS NO SON LAS FNS QUE VAMOS A USAR EN EL PROYECTO ------- */
 /* --------------------------------------------------------------------- */
 
-float medir_temp_ext() { return 10.3; }
-float medir_temp_int() { return 9.2; }
-float medir_hum_ext() { return 50.9; }
-float medir_hum_int() { return 49.13; }
 float carga_bateria_porcentaje() { return 32.90; }
 float carga_bateria_tension() { return 38.90; }
 float ver_ingresos() { return 100.9; }
@@ -308,6 +348,12 @@ void PORT_init(void) {
     CE_conf_out(led_bateria2);
     CE_conf_out(led_bateria3);
     // LEDs que marcan el estado actual de la bateria
+
+    CE_conf_in(infrarrojo1, GPIO_PuPd_NOPULL);
+    CE_EXTI_config(infrarrojo1, int_infrarrojo1);
+    CE_conf_in(infrarrojo2, GPIO_PuPd_NOPULL);
+    CE_EXTI_config(infrarrojo2, int_infrarrojo2);
+    // Configuracion de sensores infrarrojos con interrupciones
 }
 
 void controlador_systick(void) { // Esta funcion es llamada en la interrupcion del SysTick
@@ -316,10 +362,12 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 
 	++contSystick;
 
-	if (contSystick % T_REFRESH_DISPLAY == 0)
-	{
-		refrescoDisplay();
+	if (contSystick % T_SENSORES == 0) {
+		CE_leer_dht(&sensor_int);
+		CE_leer_dht(&sensor_ext);
 		contSystick=0;
+	} else if (contSystick % T_REFRESH_DISPLAY == 0) {
+		refrescoDisplay();
 	} else if (contSystick % T_PULSADORES == 0) {
 		global_puls = CE_pulsador_presionado(
 				puls_line_entrada_1,
@@ -327,6 +375,8 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 				puls_line_entrada_3,
 				puls_line_entrada_4
 		);
+	} else if (contSystick % BT_CHECK_TIME == 0) {
+		BT_ready = CE_read_BT(bt, &BT_buffer);
 	}
 }
 
@@ -566,6 +616,79 @@ void select_menu_config(char *fila1, char *fila2) {
 	}
 
 	global_puls = NO_BUTTON;
+}
+
+float medir_temp_ext(){
+	float aux_entero;
+	float aux_frac;
+	float resultado;
+
+	aux_entero = (float) sensor_ext.temp_entero;
+	aux_frac = (float) sensor_ext.temp_decimal;
+	resultado = (float)(aux_entero + (aux_frac/10));
+
+	return resultado;
+}
+
+float medir_temp_int(){
+	float aux_entero;
+	float aux_frac;
+	float resultado;
+
+	aux_entero = (float) sensor_ext.temp_entero;
+	aux_frac = (float)sensor_ext.temp_decimal;
+	resultado = (float)(aux_entero + (aux_frac/10));
+
+	return resultado;
+}
+
+float medir_hum_ext(){
+	int aux_entero;
+	float resultado;
+
+	aux_entero = sensor_ext.humedad;
+	resultado = (float)(aux_entero);
+
+	return resultado;
+}
+
+float medir_hum_int(){
+	int aux_entero;
+	float resultado;
+
+	aux_entero = sensor_int.humedad;
+	resultado = (float)(aux_entero);
+
+	return resultado;
+}
+
+void BT_sender() {
+	char buffer[50];
+	char temp_buffer[10];
+	char hum_buffer[10];
+	if (BT_buffer == 'e') {
+		// Envia la temperatura y humedad externas
+		CE_format_float(medir_temp_ext(), temp_buffer);
+		CE_format_float(medir_hum_ext(), hum_buffer);
+		siprintf(
+				buffer,
+				"T%sH%s",
+				temp_buffer,
+				hum_buffer
+		);
+	} else if (BT_buffer == 'i') {
+		// Envia la temperatura y la humedad internas
+		CE_format_float(medir_temp_int(), temp_buffer);
+		CE_format_float(medir_hum_int(), hum_buffer);
+		siprintf(
+				buffer,
+				"T%sH%s",
+				temp_buffer,
+				hum_buffer
+		);
+	}
+
+	CE_send_BT(bt, buffer);
 }
 
 void EXTI4_IRQHandler(void)

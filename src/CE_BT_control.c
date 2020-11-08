@@ -73,10 +73,8 @@ void CE_send_BT(BT bt, char *content) {
 
 uint8_t CE_read_BT(BT bt, char *buffer) {
 	/*
-	 * Esta funcion debe ser llamada en el handler de la interrupcion
-	 * USART que se defina. Cuando recibe el caracter de retorno de carro
-	 * (CR) se termina la transmision de datos, y devuelve 1, indicando
-	 * que ya se puede utilizar la informacion.
+	 * Esta funcion recibe un solo caracter, y lo carga en buffer.
+	 * Despues devuelve 0 si no recibio nada o 1 de lo contrario.
 	 */
 
 	if (USART_GetFlagStatus(USART2, USART_FLAG_RXNE) != RESET) {

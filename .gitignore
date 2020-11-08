@@ -59,3 +59,4 @@ Libraries
 .cproject
 .project
 stm32f4_flash.ld
+Proyecto.elf.launch
