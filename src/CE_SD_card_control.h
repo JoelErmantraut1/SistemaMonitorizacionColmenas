@@ -20,6 +20,7 @@ typedef struct {
 	char *temp_filename; // Nombre archivo que guarda las temperaturas
 	char *hum_filename; // Nombre archivo que guarda las humedades
 	char *health_filename; // Nombre archivo que guarda la cantidad de abejas
+	char *config_filename; // Nombre archivo que almacena las configuraciones
 } SD_Card;
 
 // Estructuras

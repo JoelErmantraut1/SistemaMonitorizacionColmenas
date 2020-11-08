@@ -3,79 +3,7 @@
  * que consiste en un sistema de monitorizacion de colmenas.
  */
 
-// ---------------------------------------------------------------------
-//                           IMPORTANTE
-// LOS PINES DEL DISPLAY ESTAN DEFINIDOS CON "DEFINES" EN LA LIBRERIA .C"
-// ---------------------------------------------------------------------
-#define T_REFRESH_DISPLAY		250
-#define	T_PULSADORES			100
-#define T_SENSORES				2500
-#define BT_CHECK_TIME			20
-#define BATTERY_CHECK			5000
-// Cantidad de us entre las diferentes funciones dentro del SysTick
-#define MAX_CHAR_LCD			17
-// Cantidad maxima de caracteres para cadenas
-#define MAX_ADC_VALUE			4095.0f // Valor para el 100% de bateria
-#define MIN_ADC_VALUE			0.0f	 // Valor para el 0% de bateria
-// Indentificadores para la carga de la bateria
-
-/* Librerias */
-#include "stm32_ub_lcd_2x16.h"
-// Librerias de terceros
-#include "CE_GPIO_control.h"
-#include "CE_generic_functions.h"
-#include "CE_SD_card_control.h"
-#include "CE_BT_control.h"
-#include "CE_ADC_control.h"
-#include "CE_PWM_control.h"
-#include "CE_EXTI_control.h"
-#include "CE_DHT11_control.h"
-// Librerias Coletto - Ermantraut
-
-/* Private macro */
-/* Private variables */
-/* Private function prototypes */
-
-void controlador_systick(void);
-void PORT_init(void);
-void refrescoDisplay(void);
-void select_menu(char *fila1, char *fila2);
-void select_menu_config(char *fila1, char *fila2);
-// Relacionado al menu
-void EXTI4_IRQHandler(void);
-void EXTI9_5_IRQHandler(void);
-// Para los sensores infrarrojos
-void BT_sender();
-// Funciones BT
-void LEDs_indicadores(uint32_t carga);
-// Funciones para medir e indicar carga bateria
-
-/* FNS REPRESENTATIVAS */
-float medir_temp_ext();
-float medir_temp_int();
-float medir_hum_ext();
-float medir_hum_int();
-float carga_bateria_porcentaje();
-float carga_bateria_tension();
-float ver_ingresos();
-float ver_egresos();
-float calcular_diferencia();
-float calcular_dif_prom();
-float crono_dia();
-float crono_hora();
-// Funciones de las mediciones
-void activar_bluetooth (void);
-void desactivar_bluetooth (void);
-void muestrear_hora (void);
-void muestrear_Min (void);
-void brilloBajo (void);
-void brilloMuyBajo (void);
-void brilloAlto (void);
-void brilloMuyAlto (void);
-// Funciones de la configuracion
-/* FNS REPRESENTATIVAS */
-
-/* Private functions */
+#include "main.h"
 
 /**
 **===========================================================================
@@ -203,7 +131,8 @@ SD_Card card = {
 		"/",
 		"/temp.txt",
 		"/hum.txt",
-		"/health.txt"
+		"/health.txt",
+		"/config.txt"
 };
 
 // Tarjeta de memoria SD
@@ -238,10 +167,21 @@ BT bt = {
 uint8_t global_puls, last_global_puls, pantalla = 0, level = 0, menu = 0, pantalla_int = 4;
 // Variables globales para el menu
 char BT_buffer;
-uint8_t BT_ready = 0;
-// Variables globales para BT
+// Variable que almacena el caracter recibido por BT
 uint8_t sensors_ready = 0;
 // Variable para avisar cuando leer el dato de los sensores
+uint8_t direccion = 0;
+// Variable que indica si una abeja entra o sale
+/*
+ * 0: Direccion no indicada
+ * 1: Entrando
+ * 2: Saliendo
+ */
+uint32_t ingresos = 0;
+uint32_t egresos = 0;
+// Contadores de cantidades de abejas que ingresaron y egresaron
+uint32_t carga_bateria = 0;
+// Variable para ver la carga actual de la bateria
 
 const char *mediciones[][3] = {
     {"Exterior", "Temp:", "Hum:"},
@@ -283,21 +223,12 @@ int main(void)
 
     CE_ADC_init(battery_adc);
     CE_PWM_init(salida_pwm, pwm);
-    CE_PMW_change_duty(pwm, 10);
 	UB_LCD_2x16_Init();
 
 	SysTick_Config(SystemCoreClock / 1000);
 
-	/*
-	char buffer[20];
-	uint8_t response = CE_read_SD(card, "/exit.txt", buffer);
-	*/
-
 	while (1) {
-		if (BT_ready) {
-			BT_sender();
-			BT_ready = 0;
-		} else if (sensors_ready) {
+		if (sensors_ready) {
 			CE_leer_dht(&sensor_int);
 			CE_leer_dht(&sensor_ext);
 
@@ -316,10 +247,6 @@ int main(void)
 /* -------- ESTAS NO SON LAS FNS QUE VAMOS A USAR EN EL PROYECTO ------- */
 /* --------------------------------------------------------------------- */
 
-float carga_bateria_porcentaje() { return 32.90; }
-float carga_bateria_tension() { return 38.90; }
-float ver_ingresos() { return 100.9; }
-float ver_egresos() { return 120.9; }
 float calcular_diferencia() { return 0; }
 float calcular_dif_prom() { return 99.0; }
 float crono_dia() { return 23.17; }
@@ -366,9 +293,9 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 	++contSystick;
 
 	if (contSystick % BATTERY_CHECK == 0) {
-		// uint32_t carga = CE_ADC_read(battery_adc);
-		// LEDs_indicadores(carga);
-		// contSystick=0;
+		carga_bateria = CE_ADC_read(battery_adc);
+		LEDs_indicadores(carga_bateria);
+		contSystick=0;
 	} else if (contSystick % T_SENSORES == 0) {
 		sensors_ready = 1;
 	} else if (contSystick % T_REFRESH_DISPLAY == 0) {
@@ -381,7 +308,7 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 				puls_line_entrada_4
 		);
 	} else if (contSystick % BT_CHECK_TIME == 0) {
-		BT_ready = CE_read_BT(bt, &BT_buffer);
+		if (CE_read_BT(bt, &BT_buffer)) BT_sender();
 	}
 }
 
@@ -667,6 +594,20 @@ float medir_hum_int(){
 	return resultado;
 }
 
+float ver_ingresos() {
+	return (float) ingresos;
+}
+float ver_egresos() {
+	return (float) egresos;
+}
+
+float carga_bateria_porcentaje() {
+	return ((float) carga_bateria / MAX_ADC_VALUE) * 100.0;
+}
+float carga_bateria_tension() {
+	return ((float) carga_bateria / MAX_ADC_VALUE) * MAX_ADC_VOLTS;
+}
+
 void BT_sender() {
 	/*
 	 * Para cada caracter que le llega genera una cadena
@@ -683,7 +624,7 @@ void BT_sender() {
 		CE_format_float(medir_hum_ext(), hum_buffer);
 		siprintf(
 				buffer,
-				"T%sH%s",
+				"T%s|H%s",
 				temp_buffer,
 				hum_buffer
 		);
@@ -694,7 +635,7 @@ void BT_sender() {
 		CE_format_float(medir_hum_int(), hum_buffer);
 		siprintf(
 				buffer,
-				"T%sH%s",
+				"T%s|H%s",
 				temp_buffer,
 				hum_buffer
 		);
@@ -734,10 +675,12 @@ void EXTI4_IRQHandler(void)
 {
 	if(EXTI_GetITStatus(int_infrarrojo1.int_line) != RESET)
 	{
-		static int state = 0;
-		state = !state;
+		if (direccion == 2) {
+			direccion = 0;
+			egresos++;
+		} else direccion = 1;
 
-		CE_EXTI_change_trigger(int_infrarrojo1);
+		// CE_EXTI_change_trigger(int_infrarrojo1);
 
 		EXTI_ClearITPendingBit(int_infrarrojo1.int_line);
 	}
@@ -747,10 +690,12 @@ void EXTI9_5_IRQHandler(void)
 {
 	if(EXTI_GetITStatus(int_infrarrojo2.int_line) != RESET)
 	{
-		static int state = 0;
-		state = !state;
+		if (direccion == 1) {
+			direccion = 0;
+			ingresos++;
+		} else direccion = 2;
 
-		CE_EXTI_change_trigger(int_infrarrojo2);
+		// CE_EXTI_change_trigger(int_infrarrojo2);
 
 		EXTI_ClearITPendingBit(int_infrarrojo2.int_line);
 	}
