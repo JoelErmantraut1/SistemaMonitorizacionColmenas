@@ -11,12 +11,13 @@
 #define	T_PULSADORES			100
 #define T_SENSORES				2500
 #define BT_CHECK_TIME			20
+#define BATTERY_CHECK			5000
 // Cantidad de us entre las diferentes funciones dentro del SysTick
-#define SENSOR_INT				1
-#define SENSOR_EXT				2
-// Identificadores de sensores
 #define MAX_CHAR_LCD			17
 // Cantidad maxima de caracteres para cadenas
+#define MAX_ADC_VALUE			4095.0f // Valor para el 100% de bateria
+#define MIN_ADC_VALUE			0.0f	 // Valor para el 0% de bateria
+// Indentificadores para la carga de la bateria
 
 /* Librerias */
 #include "stm32_ub_lcd_2x16.h"
@@ -46,6 +47,8 @@ void EXTI9_5_IRQHandler(void);
 // Para los sensores infrarrojos
 void BT_sender();
 // Funciones BT
+void LEDs_indicadores(uint32_t carga);
+// Funciones para medir e indicar carga bateria
 
 /* FNS REPRESENTATIVAS */
 float medir_temp_ext();
@@ -91,14 +94,14 @@ Salida led_bateria1 = {
 Salida led_bateria2 = {
 	RCC_AHB1Periph_GPIOE,
 	GPIOE,
-	GPIO_Pin_9,
+	GPIO_Pin_8,
 	GPIO_PinSource8
 };
 Salida led_bateria3 = {
 	RCC_AHB1Periph_GPIOE,
 	GPIOE,
-	GPIO_Pin_11,
-	GPIO_PinSource11
+	GPIO_Pin_9,
+	GPIO_PinSource9
 };
 
 Salida salida_pwm = {
@@ -184,7 +187,7 @@ DHT_Sensor sensor_ext = {
 
 // Sensores de temperatura y humedad, interno y externo
 
-ADC_PIN adc = {
+ADC_PIN battery_adc = {
 		GPIOC,
 		GPIO_Pin_2,
 		RCC_AHB1Periph_GPIOC,
@@ -235,8 +238,10 @@ BT bt = {
 uint8_t global_puls, last_global_puls, pantalla = 0, level = 0, menu = 0, pantalla_int = 4;
 // Variables globales para el menu
 char BT_buffer;
-int BT_ready = 0;
+uint8_t BT_ready = 0;
 // Variables globales para BT
+uint8_t sensors_ready = 0;
+// Variable para avisar cuando leer el dato de los sensores
 
 const char *mediciones[][3] = {
     {"Exterior", "Temp:", "Hum:"},
@@ -276,7 +281,7 @@ int main(void)
 
 	CE_DHT11_TIM5_Start(); // Inicializa el timer del DHT
 
-    CE_ADC_init(adc);
+    CE_ADC_init(battery_adc);
     CE_PWM_init(salida_pwm, pwm);
     CE_PMW_change_duty(pwm, 10);
 	UB_LCD_2x16_Init();
@@ -286,24 +291,22 @@ int main(void)
 	/*
 	char buffer[20];
 	uint8_t response = CE_read_SD(card, "/exit.txt", buffer);
-
-	CE_leer_dht(&sensor_int);
-	UB_LCD_2x16_String(0,0, sensor_int.temp_string);
-	UB_LCD_2x16_String(0,1, sensor_int.hum_string); // Texto en la linea 1
-
-	CE_leer_dht(&sensor_ext);
-	UB_LCD_2x16_String(0,0, sensor_ext.temp_string);
-	UB_LCD_2x16_String(0,1, sensor_ext.hum_string); // Texto en la linea 1
-
-	CE_send_BT(bt, "r");
-	CE_read_BT(bt, buffer);
-	UB_LCD_2x16_String(0, 0, buffer);
 	*/
 
 	while (1) {
 		if (BT_ready) {
 			BT_sender();
 			BT_ready = 0;
+		} else if (sensors_ready) {
+			CE_leer_dht(&sensor_int);
+			CE_leer_dht(&sensor_ext);
+
+			CE_write_SD(card, card.temp_filename, sensor_int.temp_string, 0);
+			CE_write_SD(card, card.temp_filename, sensor_ext.temp_string, 0);
+			CE_write_SD(card, card.hum_filename, sensor_int.hum_string, 0);
+			CE_write_SD(card, card.hum_filename, sensor_int.hum_string, 0);
+
+			sensors_ready = 0;
 		}
 	}
 }
@@ -362,10 +365,12 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 
 	++contSystick;
 
-	if (contSystick % T_SENSORES == 0) {
-		CE_leer_dht(&sensor_int);
-		CE_leer_dht(&sensor_ext);
-		contSystick=0;
+	if (contSystick % BATTERY_CHECK == 0) {
+		// uint32_t carga = CE_ADC_read(battery_adc);
+		// LEDs_indicadores(carga);
+		// contSystick=0;
+	} else if (contSystick % T_SENSORES == 0) {
+		sensors_ready = 1;
 	} else if (contSystick % T_REFRESH_DISPLAY == 0) {
 		refrescoDisplay();
 	} else if (contSystick % T_PULSADORES == 0) {
@@ -663,10 +668,16 @@ float medir_hum_int(){
 }
 
 void BT_sender() {
+	/*
+	 * Para cada caracter que le llega genera una cadena
+	 * con la informacion correspondiente y la envia
+	 */
 	char buffer[50];
 	char temp_buffer[10];
 	char hum_buffer[10];
-	if (BT_buffer == 'e') {
+
+	switch (BT_buffer) {
+	case 'e':
 		// Envia la temperatura y humedad externas
 		CE_format_float(medir_temp_ext(), temp_buffer);
 		CE_format_float(medir_hum_ext(), hum_buffer);
@@ -676,7 +687,8 @@ void BT_sender() {
 				temp_buffer,
 				hum_buffer
 		);
-	} else if (BT_buffer == 'i') {
+		break;
+	case 'i':
 		// Envia la temperatura y la humedad internas
 		CE_format_float(medir_temp_int(), temp_buffer);
 		CE_format_float(medir_hum_int(), hum_buffer);
@@ -686,9 +698,36 @@ void BT_sender() {
 				temp_buffer,
 				hum_buffer
 		);
+		break;
+	default:
+		break;
 	}
 
 	CE_send_BT(bt, buffer);
+}
+
+void LEDs_indicadores(uint32_t carga) {
+	/*
+	 * Si la carga de la bateria supera el 30%:
+	 * 		Prende solo el primero
+	 * Si supera el 60%:
+	 * 		Prende los primeros dos
+	 * Si supera el 90%:
+	 * 		Prende los tres LEDs
+	 */
+
+	uint8_t porcentaje = ((float) carga / (MAX_ADC_VALUE - MIN_ADC_VALUE)) * 100;
+
+	CE_escribir_salida(led_bateria1, 0);
+	CE_escribir_salida(led_bateria1, 0);
+	CE_escribir_salida(led_bateria1, 0);
+
+	if (porcentaje > 30)
+		CE_escribir_salida(led_bateria1, 1);
+	if (porcentaje > 60)
+		CE_escribir_salida(led_bateria2, 1);
+	if (porcentaje > 90)
+		CE_escribir_salida(led_bateria3, 1);
 }
 
 void EXTI4_IRQHandler(void)

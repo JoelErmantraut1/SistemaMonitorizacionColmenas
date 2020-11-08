@@ -27,7 +27,8 @@ uint8_t CE_write_SD(SD_Card card, char *filename, char *text, uint8_t ow) {
 		if (f_open(&fil, filename, FA_OPEN_ALWAYS  | FA_WRITE) == FR_OK) {
 
 			if (!ow) f_lseek(&fil, f_size(&fil));
-			// Mueve el puntero al final de archivo para evitar sobreescritura
+			// Si ow == 0: Mueve el puntero al final de archivo para evitar sobreescritura
+			// Si ow == 1: Comienza a escribir desde el principio, sobreescribiendo
 
 			if (f_puts(text, &fil) > 0) {
 				success = 1;
