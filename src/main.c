@@ -180,8 +180,6 @@ uint8_t direccion = 0;
 uint32_t ingresos = 0;
 uint32_t egresos = 0;
 // Contadores de cantidades de abejas que ingresaron y egresaron
-uint32_t infra_delay1 = 0, infra_delay2 = 0;
-// Variable que actua para evitar el rebote de los infrarrojos
 uint32_t carga_bateria = 0;
 // Variable para ver la carga actual de la bateria
 uint16_t inactividad = 0;
@@ -224,6 +222,9 @@ int main(void)
     CE_init_BT(bt);
 
 	CE_DHT11_TIM5_Start(); // Inicializa el timer del DHT
+	CE_EXTI_TIM_Start();
+	// Timer que se usa como antirebote para las interrupciones
+	// de los sensores infrarrojos
 
     CE_ADC_init(battery_adc);
     CE_PWM_init(salida_pwm, pwm);
@@ -290,8 +291,6 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 	static int contSystick = 0;
 
 	++contSystick;
-	++infra_delay1;
-	++infra_delay2;
 
 	if (contSystick % BATTERY_CHECK == 0) {
 		carga_bateria = CE_ADC_read(battery_adc);
@@ -723,14 +722,14 @@ void brilloMuyAlto (void) {
 
 void EXTI4_IRQHandler(void)
 {
-	if(EXTI_GetITStatus(int_infrarrojo1.int_line) != RESET && infra_delay1 >= INFRA_DELAY_LIMIT)
+	if(EXTI_GetITStatus(int_infrarrojo1.int_line) != RESET && CE_EXTI_TIM_ready())
 	{
 		if (direccion == 2) {
 			direccion = 0;
 			egresos++;
 		} else direccion = 1;
 
-		infra_delay1 = 0;
+		CE_delay_EXTI_TIM(100000);
 
 		EXTI_ClearITPendingBit(int_infrarrojo1.int_line);
 	}
@@ -738,14 +737,14 @@ void EXTI4_IRQHandler(void)
 
 void EXTI9_5_IRQHandler(void)
 {
-	if(EXTI_GetITStatus(int_infrarrojo2.int_line) != RESET && infra_delay2 >= INFRA_DELAY_LIMIT)
+	if(EXTI_GetITStatus(int_infrarrojo2.int_line) != RESET && CE_EXTI_TIM_ready())
 	{
 		if (direccion == 1) {
 			direccion = 0;
 			ingresos++;
 		} else direccion = 2;
 
-		infra_delay2 = 0;
+		CE_delay_EXTI_TIM(100000);
 
 		EXTI_ClearITPendingBit(int_infrarrojo2.int_line);
 	}

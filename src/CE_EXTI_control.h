@@ -21,6 +21,15 @@ typedef struct {
 
 void CE_EXTI_config(Entrada entrada, EXTI_entrada int_entrada);
 void CE_EXTI_change_trigger(EXTI_entrada int_entrada);
+// Prototipos relacionados a la linea de interrupcion
+void TIM2_Init(void);
+void TIM2_Config(void);
+void CE_EXTI_TIM_Start(void);
+void TIM2_IRQHandler(void);
+uint8_t CE_EXTI_TIM_ready(void);
+void set_TIM_delay(uint32_t tiempo);
+void CE_delay_EXTI_TIM(uint32_t tiempo);
+// Prototipos relacionados al timer que hace de antirebote
 
 // Prototipos
 
