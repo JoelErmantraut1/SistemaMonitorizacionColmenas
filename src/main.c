@@ -573,32 +573,67 @@ void BT_sender() {
 	 * con la informacion correspondiente y la envia
 	 */
 	char buffer[50];
-	char temp_buffer[10];
-	char hum_buffer[10];
+	char first_buffer[10];
+	char second_buffer[10];
 
 	switch (BT_buffer) {
 	case 'e':
 		// Envia la temperatura y humedad externas
-		CE_format_float(medir_temp_ext(), temp_buffer);
-		CE_format_float(medir_hum_ext(), hum_buffer);
+		CE_format_float(medir_temp_ext(), first_buffer);
+		CE_format_float(medir_hum_ext(), second_buffer);
 		siprintf(
 				buffer,
 				"T%s|H%s",
-				temp_buffer,
-				hum_buffer
+				first_buffer,
+				second_buffer
 		);
 		break;
 	case 'i':
 		// Envia la temperatura y la humedad internas
-		CE_format_float(medir_temp_int(), temp_buffer);
-		CE_format_float(medir_hum_int(), hum_buffer);
+		CE_format_float(medir_temp_int(), first_buffer);
+		CE_format_float(medir_hum_int(), second_buffer);
 		siprintf(
 				buffer,
 				"T%s|H%s",
-				temp_buffer,
-				hum_buffer
+				first_buffer,
+				second_buffer
 		);
 		break;
+	case 'a':
+		// Envia la cantidad de ingresos y egresos
+		CE_format_float(ver_ingresos(), first_buffer);
+		CE_format_float(ver_egresos(), second_buffer);
+		siprintf(
+				buffer,
+				"i%s|e%s",
+				first_buffer,
+				second_buffer
+		);
+		break;
+	case 'd':
+		// Envia la diferencia entre ingresos y egresos
+		// Y la salud de la colmena
+		CE_format_float(calcular_diferencia(), first_buffer);
+		CE_format_float(20.0, second_buffer);
+		siprintf(
+				buffer,
+				"d%s|s%s",
+				first_buffer,
+				second_buffer
+		);
+		break;
+	case 'c':
+		CE_format_float(carga_bateria_tension(), first_buffer);
+		CE_format_float(carga_bateria_porcentaje(), second_buffer);
+		siprintf(
+				buffer,
+				"v%s|p%s",
+				first_buffer,
+				second_buffer
+		);
+		break;
+	case 'b':
+		// Envia informacion del cronometro
 	default:
 		break;
 	}
