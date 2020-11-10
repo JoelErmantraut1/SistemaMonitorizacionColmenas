@@ -37,7 +37,7 @@ Algoritmo principal del proyecto de cuarto año de Ingeniería Electrónica que 
  - Medición de temperatura y humedad finalizado.
  - Registro de datos en SD listo.
  - Interacción con aplicación móvil a través de Bluetooth funcionando.
- - Conteo de ingresos y egresos de abejas terminado.
+ - Conteo de abejas terminado.
  - Mayor parte de las funciones de configuración terminadas.
  - Presentación de carga de batería lista.
  - Algunas de las funciones “pro ambientales” integradas.
