@@ -3,7 +3,7 @@ Algoritmo principal del proyecto de cuarto año de Ingeniería Electrónica que 
 
 ## Descripción
   El mismo consiste en un dispositivo electrónico que se dedica a analizar algunas variables fundamentales para poder establecer la salud de una colmena. Estas variables son la temperatura y humedad, tanto fuera como dentro de la misma, además de un conteo de la cantidad de abejas que ingresan y egresan de la colmena.
-  La lógica de esta última función es que cuando una abeja sale de la colmena a realizar el proceso de polinización, debería regresar a la misma luego de finalizada su actividad. Si el estado de salud de la misma no es bueno, morirá en el camino, y nunca volverá a ingresar a la colmena. De esta manera, se puede emplear la diferencia entre ingresos y egresos para determinar la salud de la población.
+  La lógica de esta última función es que cuando una abeja sale de la colmena a realizar el proceso de polinización, debería regresar a la misma luego de finalizada su actividad. Si el estado de salud de la abeja no es bueno, morirá en el camino, y nunca volverá a ingresar a la colmena. De esta manera, se puede emplear la diferencia entre ingresos y egresos para determinar la salud de la población.
   
 ## Funciones generales
  - Monitorear a través de distintas variables la salud de la colmena.
