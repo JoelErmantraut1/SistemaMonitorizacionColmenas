@@ -15,7 +15,6 @@ Algoritmo principal del proyecto de cuarto año de Ingeniería Electrónica que 
  - Memoria SD para almacenamiento y registro de mediciones.
  - Menú integrado para navegar entre las distintas funciones.
  - Conexión Bluetooth para el levantamiento de datos y configuración del sistema.
- - Conteo diferencial del ingreso y egreso de abejas a la colmena.
  
 ## Componentes incorporados
  - Display LCD de 2 filas por 16 columnas.
