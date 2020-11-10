@@ -30,7 +30,7 @@ Algoritmo principal del proyecto de cuarto año de Ingeniería Electrónica que 
  - Módulo Bluetooth.
  - 2 sensores de temperatura y humedad.
  - Sensores infrarrojos.
- - Batería de 12 - 4Ah.
+ - Batería de 12V - 4Ah.
  
 ## Estado de avance actual del proyecto
  - Menú finalizado.
@@ -45,6 +45,7 @@ Algoritmo principal del proyecto de cuarto año de Ingeniería Electrónica que 
 ## Pendientes
  - Finalizar de integrar modos de bajo consumo.
  - Incorporar funciones de cronometraje.
+ - Emprolijar y afinar detalles.
  
 ## Posibles Modificaciones futuras
  - Integración de comunicación inalámbrica de mayor distancia, como puede ser Wi-Fi.
