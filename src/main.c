@@ -222,12 +222,14 @@ int main(void)
 	UB_LCD_2x16_Init();
 	CE_Print_StartScreen();
 	// Imprime el cartel inicial durante 5 segundos
+
 	CE_TIM5_delay(5000000);
 	// 5e6 us = 5000ms = 5s
 
 	PORT_init();
 	// Configura pulsadores, LEDs e infrarrojos
 
+	CE_ADC_init(battery_adc);
 	carga_bateria = CE_ADC_read(battery_adc);
 	LEDs_indicadores(carga_bateria);
 	// Medimos bateria y presentamos la carga con los LEDs
@@ -237,8 +239,6 @@ int main(void)
 	CE_EXTI_TIM_Start();
 	// Timer que se usa como antirebote para las interrupciones
 	// de los sensores infrarrojos
-
-    CE_ADC_init(battery_adc);
 
 	SysTick_Config(SystemCoreClock / SYSTICK_CONSTANT);
 	/*
@@ -253,7 +253,7 @@ int main(void)
 			CE_write_SD(card, card.temp_filename, sensor_int.temp_string, 0);
 			CE_write_SD(card, card.temp_filename, sensor_ext.temp_string, 0);
 			CE_write_SD(card, card.hum_filename, sensor_int.hum_string, 0);
-			CE_write_SD(card, card.hum_filename, sensor_int.hum_string, 0);
+			CE_write_SD(card, card.hum_filename, sensor_ext.hum_string, 0);
 
 			sensors_ready = 0;
 		}
@@ -516,7 +516,7 @@ void select_menu(char *fila1, char *fila2) {
 void select_menu_config(char *fila1, char *fila2) {
 	/*
 	 * Se encarga de decidir que contenido mostrar en el menu
-	 * dentro del apartado de mediciones
+	 * dentro del apartado de configuraciones
 	 */
 
 	static uint8_t last_global_puls = NO_BUTTON;
@@ -699,7 +699,7 @@ void select_menu_config(char *fila1, char *fila2) {
 /* ---------------	FNS DEL APARTADO "MEDICIONES" DEL MENU	------------ */
 /* --------------------------------------------------------------------- */
 
-float medir_temp_ext(){
+float medir_temp_ext() {
 	float aux_entero;
 	float aux_frac;
 	float resultado;
@@ -710,20 +710,20 @@ float medir_temp_ext(){
 
 	return resultado;
 }
-float medir_temp_int(){
+float medir_temp_int() {
 	float aux_entero;
 	float aux_frac;
 	float resultado;
 
-	aux_entero = (float) sensor_ext.temp_entero;
-	aux_frac = (float)sensor_ext.temp_decimal;
+	aux_entero = (float) sensor_int.temp_entero;
+	aux_frac = (float)sensor_int.temp_decimal;
 	resultado = (float)(aux_entero + (aux_frac/10));
 
 	return resultado;
 }
 // Medicion de temperatura externa e interna
 
-float medir_hum_ext(){
+float medir_hum_ext() {
 	int aux_entero;
 	float resultado;
 
@@ -732,7 +732,7 @@ float medir_hum_ext(){
 
 	return resultado;
 }
-float medir_hum_int(){
+float medir_hum_int() {
 	int aux_entero;
 	float resultado;
 
@@ -878,16 +878,20 @@ void CE_Print_StartScreen(void)
 
 void EXTI4_IRQHandler(void)
 {
-	if(EXTI_GetITStatus(int_infrarrojo1.int_line) != RESET && CE_EXTI_TIM_ready())
-	{
-		if (direccion == 2) {
-			direccion = 0;
-			egresos++;
-		} else direccion = 1;
 
-		CE_delay_EXTI_TIM(100000);
-		// Estos retardos actuan como antirrebote de los
-		// sensores infrarrojos
+	if(EXTI_GetITStatus(int_infrarrojo1.int_line) != RESET) {
+		if (int_infrarrojo1.int_trigger == EXTI_Trigger_Rising && CE_EXTI_TIM_ready()) {
+			if (direccion == 2) {
+				direccion = 0;
+				egresos++;
+			} else direccion = 1;
+		} else {
+			set_TIM_delay(INFRA_DELAY_LIMIT);
+			// Estos retardos actuan como antirrebote de los
+			// sensores infrarrojos
+		}
+
+		CE_EXTI_change_trigger(&int_infrarrojo1);
 
 		EXTI_ClearITPendingBit(int_infrarrojo1.int_line);
 	}
@@ -895,14 +899,19 @@ void EXTI4_IRQHandler(void)
 
 void EXTI9_5_IRQHandler(void)
 {
-	if(EXTI_GetITStatus(int_infrarrojo2.int_line) != RESET && CE_EXTI_TIM_ready())
-	{
-		if (direccion == 1) {
-			direccion = 0;
-			ingresos++;
-		} else direccion = 2;
+	if(EXTI_GetITStatus(int_infrarrojo2.int_line) != RESET) {
+		if (int_infrarrojo2.int_trigger == EXTI_Trigger_Rising && CE_EXTI_TIM_ready()) {
+			if (direccion == 1) {
+				direccion = 0;
+				ingresos++;
+			} else direccion = 2;
+		} else {
+			set_TIM_delay(INFRA_DELAY_LIMIT);
+			// Estos retardos actuan como antirrebote de los
+			// sensores infrarrojos
+		}
 
-		CE_delay_EXTI_TIM(100000);
+		CE_EXTI_change_trigger(&int_infrarrojo2);
 
 		EXTI_ClearITPendingBit(int_infrarrojo2.int_line);
 	}

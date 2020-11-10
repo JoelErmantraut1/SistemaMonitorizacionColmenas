@@ -20,7 +20,7 @@ typedef struct {
 // Estructuras
 
 void CE_EXTI_config(Entrada entrada, EXTI_entrada int_entrada);
-void CE_EXTI_change_trigger(EXTI_entrada int_entrada);
+void CE_EXTI_change_trigger(EXTI_entrada *int_entrada);
 // Prototipos relacionados a la linea de interrupcion
 void TIM2_Init(void);
 void TIM2_Config(void);

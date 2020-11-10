@@ -16,10 +16,8 @@ void CE_EXTI_config(Entrada entrada, EXTI_entrada int_entrada) {
 	/* Enable SYSCFG clock */
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 
-	/* Connect EXTI Line6 to PC6 pin */
 	SYSCFG_EXTILineConfig(int_entrada.int_port, int_entrada.int_source);
 
-	/* Configure EXTI Line6 */
 	EXTI_InitStructure.EXTI_Line = int_entrada.int_line;
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
 	EXTI_InitStructure.EXTI_Trigger = int_entrada.int_trigger;
@@ -35,16 +33,16 @@ void CE_EXTI_config(Entrada entrada, EXTI_entrada int_entrada) {
 	NVIC_Init(&NVIC_InitStructure);
 }
 
-void CE_EXTI_change_trigger(EXTI_entrada int_entrada) {
-	if (int_entrada.int_trigger == EXTI_Trigger_Rising) {
+void CE_EXTI_change_trigger(EXTI_entrada *int_entrada) {
+	if (int_entrada->int_trigger == EXTI_Trigger_Rising) {
 		EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
-		int_entrada.int_trigger = EXTI_Trigger_Falling;
+		int_entrada->int_trigger = EXTI_Trigger_Falling;
 	} else {
 		EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
-		int_entrada.int_trigger = EXTI_Trigger_Rising;
+		int_entrada->int_trigger = EXTI_Trigger_Rising;
 	}
 
-	EXTI_InitStructure.EXTI_Line = int_entrada.int_line;
+	EXTI_InitStructure.EXTI_Line = int_entrada->int_line;
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
 	EXTI_Init(&EXTI_InitStructure);
@@ -116,8 +114,8 @@ uint8_t CE_EXTI_TIM_ready(void) {
 }
 
 void set_TIM_delay(uint32_t tiempo) {
-	TimingDelay_TIM2 = tiempo * 1000;
-	// Se pasa en ms pero se trabaja en us
+	TimingDelay_TIM2 = tiempo;
+	// Tiempo en us
 
 	TIM_Cmd(TIM2, ENABLE);
 }

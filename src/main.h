@@ -18,8 +18,8 @@
 // Indentificadores para la carga de la bateria
 #define MAX_ADC_VOLTS			2.9f
 // Maxima tension que mide el ADC
-#define	INFRA_DELAY_LIMIT		10
-// Limite para el antirrebote de los sensores de proximidad
+#define	INFRA_DELAY_LIMIT		10000
+// Limite para el antirrebote de los sensores de proximidad en us
 #define SYSTICK_CONSTANT		1000
 // Constante que establece cada cuanto se interrumpe el Systick
 
