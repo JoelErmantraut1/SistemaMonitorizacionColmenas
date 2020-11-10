@@ -226,6 +226,11 @@ int main(void)
 	// 5e6 us = 5000ms = 5s
 
 	PORT_init();
+	// Configura pulsadores, LEDs e infrarrojos
+
+	carga_bateria = CE_ADC_read(battery_adc);
+	LEDs_indicadores(carga_bateria);
+	// Medimos bateria y presentamos la carga con los LEDs
 
     CE_init_BT(bt);
 
@@ -235,7 +240,10 @@ int main(void)
 
     CE_ADC_init(battery_adc);
 
-	SysTick_Config(SystemCoreClock / 1000);
+	SysTick_Config(SystemCoreClock / SYSTICK_CONSTANT);
+	/*
+	 * El SysTick incorpora la mayoria de la funciones temporizadas
+	 */
 
 	while (1) {
 		if (sensors_ready) {
@@ -249,6 +257,8 @@ int main(void)
 
 			sensors_ready = 0;
 		}
+		// Cuando la variable cambia con el SysTick, se leen los datos
+		// de los sensores y se guardan en su correspondiente archivo
 	}
 }
 
@@ -268,8 +278,8 @@ void muestrear_min (void) { ; }
 // Funciones de la configuracion
 
 /* --------------------------------------------------------------------- */
-/* --------------------- FUNCIONES REPRESENTATIVAS --------------------- */
-/* -------- ESTAS NO SON LAS FNS QUE VAMOS A USAR EN EL PROYECTO ------- */
+/* --------------------------  FNS GENERALES  -------------------------- */
+/* --------------------------------------------------------------------- */
 /* --------------------------------------------------------------------- */
 
 void PORT_init(void) {
@@ -291,8 +301,110 @@ void PORT_init(void) {
     // Configuracion de sensores infrarrojos con interrupciones
 }
 
+void BT_sender() {
+	/*
+	 * Para cada caracter que le llega genera una cadena
+	 * con la informacion correspondiente y la envia
+	 */
+	char buffer[50];
+	char first_buffer[10];
+	char second_buffer[10];
+
+	switch (BT_buffer) {
+	case 'e':
+		// Envia la temperatura y humedad externas
+		CE_format_float(medir_temp_ext(), first_buffer);
+		CE_format_float(medir_hum_ext(), second_buffer);
+		siprintf(
+				buffer,
+				"T%s|H%s",
+				first_buffer,
+				second_buffer
+		);
+		break;
+	case 'i':
+		// Envia la temperatura y la humedad internas
+		CE_format_float(medir_temp_int(), first_buffer);
+		CE_format_float(medir_hum_int(), second_buffer);
+		siprintf(
+				buffer,
+				"t%s|h%s",
+				first_buffer,
+				second_buffer
+		);
+		break;
+	case 'a':
+		// Envia la cantidad de ingresos y egresos
+		CE_format_float(ver_ingresos(), first_buffer);
+		CE_format_float(ver_egresos(), second_buffer);
+		siprintf(
+				buffer,
+				"i%s|e%s",
+				first_buffer,
+				second_buffer
+		);
+		break;
+	case 'd':
+		// Envia la diferencia entre ingresos y egresos
+		// Y la salud de la colmena
+		CE_format_float(calcular_diferencia(), first_buffer);
+		CE_format_float(20.0, second_buffer);
+		siprintf(
+				buffer,
+				"d%s|s%s",
+				first_buffer,
+				second_buffer
+		);
+		break;
+	case 'c':
+		// Envia la carga de la bateria como tension y como porcentaje
+		CE_format_float(carga_bateria_tension(), first_buffer);
+		CE_format_float(carga_bateria_porcentaje(), second_buffer);
+		siprintf(
+				buffer,
+				"v%s|p%s",
+				first_buffer,
+				second_buffer
+		);
+		break;
+	case 'b':
+		// Envia informacion del cronometro
+		// Falta incorporar RTC
+	default:
+		break;
+	}
+
+	CE_send_BT(bt, buffer);
+}
+
+void LEDs_indicadores(uint32_t carga) {
+	/*
+	 * Si la carga es menor al 30%:
+	 * 		Apaga todos
+	 * Si la carga de la bateria supera el 30%:
+	 * 		Prende solo el primero
+	 * Si supera el 60%:
+	 * 		Prende los primeros dos
+	 * Si supera el 90%:
+	 * 		Prende los tres LEDs
+	 */
+
+	uint8_t porcentaje = ((float) carga / (MAX_ADC_VALUE - MIN_ADC_VALUE)) * 100;
+
+	CE_escribir_salida(led_bateria1, 0);
+	CE_escribir_salida(led_bateria1, 0);
+	CE_escribir_salida(led_bateria1, 0);
+
+	if (porcentaje > 30)
+		CE_escribir_salida(led_bateria1, 1);
+	if (porcentaje > 60)
+		CE_escribir_salida(led_bateria2, 1);
+	if (porcentaje > 90)
+		CE_escribir_salida(led_bateria3, 1);
+}
+
 void controlador_systick(void) { // Esta funcion es llamada en la interrupcion del SysTick
-	// Configurado para interrumpir cada 1ms
+	// Configurado para interrumpir cada SYSTICK_CONSTANT us
 	static int contSystick = 0;
 
 	++contSystick;
@@ -313,6 +425,12 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 				puls_line_entrada_4
 		);
 		if (global_puls == NO_BUTTON) {
+			/*
+			 * Esta funcion reduce el brillo de la pantalla al minimo
+			 * cuando no se presionaron teclas durante aproximadamente
+			 * 1 minuto.
+			 * Luego, cuando se presiona una tecla, pone el brillo alto.
+			 */
 			++inactividad;
 			if (inactividad >= 600) {
 				// No hubo actividad en los ultimos 60 segundos
@@ -323,6 +441,7 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 		} else {
 			 inactividad = 0;
 			 brilloAlto();
+			 // Pone el brillo del display alto para empezar a interactuar
 		}
 	} else if (contSystick % BT_CHECK_TIME == 0) {
 		if (CE_read_BT(bt, &BT_buffer)) BT_sender();
@@ -352,6 +471,10 @@ void refrescoDisplay(void) {
 }
 
 void select_menu(char *fila1, char *fila2) {
+	/*
+	 * Se encarga de decidir que contenido mostrar en el menu
+	 * dentro del apartado de mediciones
+	 */
 
 	static uint8_t last_global_puls = NO_BUTTON;
 
@@ -391,6 +514,10 @@ void select_menu(char *fila1, char *fila2) {
 }
 
 void select_menu_config(char *fila1, char *fila2) {
+	/*
+	 * Se encarga de decidir que contenido mostrar en el menu
+	 * dentro del apartado de mediciones
+	 */
 
 	static uint8_t last_global_puls = NO_BUTTON;
 
@@ -568,109 +695,6 @@ void select_menu_config(char *fila1, char *fila2) {
 }
 
 /* --------------------------------------------------------------------- */
-/* ------------------------  OTRAS FUNCIONES	------------------------ */
-/* --------------------------------------------------------------------- */
-/* --------------------------------------------------------------------- */
-
-void BT_sender() {
-	/*
-	 * Para cada caracter que le llega genera una cadena
-	 * con la informacion correspondiente y la envia
-	 */
-	char buffer[50];
-	char first_buffer[10];
-	char second_buffer[10];
-
-	switch (BT_buffer) {
-	case 'e':
-		// Envia la temperatura y humedad externas
-		CE_format_float(medir_temp_ext(), first_buffer);
-		CE_format_float(medir_hum_ext(), second_buffer);
-		siprintf(
-				buffer,
-				"T%s|H%s",
-				first_buffer,
-				second_buffer
-		);
-		break;
-	case 'i':
-		// Envia la temperatura y la humedad internas
-		CE_format_float(medir_temp_int(), first_buffer);
-		CE_format_float(medir_hum_int(), second_buffer);
-		siprintf(
-				buffer,
-				"t%s|h%s",
-				first_buffer,
-				second_buffer
-		);
-		break;
-	case 'a':
-		// Envia la cantidad de ingresos y egresos
-		CE_format_float(ver_ingresos(), first_buffer);
-		CE_format_float(ver_egresos(), second_buffer);
-		siprintf(
-				buffer,
-				"i%s|e%s",
-				first_buffer,
-				second_buffer
-		);
-		break;
-	case 'd':
-		// Envia la diferencia entre ingresos y egresos
-		// Y la salud de la colmena
-		CE_format_float(calcular_diferencia(), first_buffer);
-		CE_format_float(20.0, second_buffer);
-		siprintf(
-				buffer,
-				"d%s|s%s",
-				first_buffer,
-				second_buffer
-		);
-		break;
-	case 'c':
-		CE_format_float(carga_bateria_tension(), first_buffer);
-		CE_format_float(carga_bateria_porcentaje(), second_buffer);
-		siprintf(
-				buffer,
-				"v%s|p%s",
-				first_buffer,
-				second_buffer
-		);
-		break;
-	case 'b':
-		// Envia informacion del cronometro
-	default:
-		break;
-	}
-
-	CE_send_BT(bt, buffer);
-}
-
-void LEDs_indicadores(uint32_t carga) {
-	/*
-	 * Si la carga de la bateria supera el 30%:
-	 * 		Prende solo el primero
-	 * Si supera el 60%:
-	 * 		Prende los primeros dos
-	 * Si supera el 90%:
-	 * 		Prende los tres LEDs
-	 */
-
-	uint8_t porcentaje = ((float) carga / (MAX_ADC_VALUE - MIN_ADC_VALUE)) * 100;
-
-	CE_escribir_salida(led_bateria1, 0);
-	CE_escribir_salida(led_bateria1, 0);
-	CE_escribir_salida(led_bateria1, 0);
-
-	if (porcentaje > 30)
-		CE_escribir_salida(led_bateria1, 1);
-	if (porcentaje > 60)
-		CE_escribir_salida(led_bateria2, 1);
-	if (porcentaje > 90)
-		CE_escribir_salida(led_bateria3, 1);
-}
-
-/* --------------------------------------------------------------------- */
 /* --------------------- 	FUNCIONES "MEDICION" 	-------------------- */
 /* ---------------	FNS DEL APARTADO "MEDICIONES" DEL MENU	------------ */
 /* --------------------------------------------------------------------- */
@@ -686,7 +710,6 @@ float medir_temp_ext(){
 
 	return resultado;
 }
-
 float medir_temp_int(){
 	float aux_entero;
 	float aux_frac;
@@ -698,6 +721,7 @@ float medir_temp_int(){
 
 	return resultado;
 }
+// Medicion de temperatura externa e interna
 
 float medir_hum_ext(){
 	int aux_entero;
@@ -708,7 +732,6 @@ float medir_hum_ext(){
 
 	return resultado;
 }
-
 float medir_hum_int(){
 	int aux_entero;
 	float resultado;
@@ -718,6 +741,7 @@ float medir_hum_int(){
 
 	return resultado;
 }
+// Medicion de humedad externa e interna
 
 float ver_ingresos() {
 	return (float) ingresos;
@@ -725,6 +749,7 @@ float ver_ingresos() {
 float ver_egresos() {
 	return (float) egresos;
 }
+// Cantidad de ingresos o egresos de abejas a la colmena
 
 float carga_bateria_porcentaje() {
 	return ((float) carga_bateria / MAX_ADC_VALUE) * 100.0;
@@ -732,9 +757,14 @@ float carga_bateria_porcentaje() {
 float carga_bateria_tension() {
 	return ((float) carga_bateria / MAX_ADC_VALUE) * MAX_ADC_VOLTS;
 }
+// Ambas muestran la misma carga, solo que una la muestra en
+// volts y la otra porcentualmente
 
 float calcular_diferencia() {
 	return (float) abs(ingresos - egresos);
+	// Los ingresos pueden ser mayores que los egresos o al reves
+	// Por eso se agrega un valor absoluto para que muestre el
+	// indicador modular que caracteriza a la opcion
 }
 
 /* --------------------------------------------------------------------- */
@@ -754,90 +784,91 @@ void brilloAlto (void) {
 void brilloMuyAlto (void) {
 	CE_PMW_change_duty(pwm, 100);
 }
+// Funciones que varian el brillo del LCD
 
 void CE_Print_StartScreen(void)
 {
-		// Definición de un carácter especial en 8 bytes.
-		uint8_t buf0[8];
-		buf0[0]=0b00000000;
-		buf0[1]=0b00000000;
-		buf0[2]=0b00000000;
-		buf0[3]=0b00000110;
-		buf0[4]=0b00000101;
-		buf0[5]=0b00000000;
-		buf0[6]=0b00000000;
-		buf0[7]=0b00000000;
-		UB_LCD_2x16_WriteCG(0, buf0); // Almacenar un carácter especial en el CG-RAM desde la pantalla
-		UB_LCD_2x16_PrintCG(0, 0, 0); // Salida del carácter especial en la pos. X, Y
+	/*
+	 * Esta funcion configura un cartel que se puede colocar
+	 * al inicio de programa para mostrar una pantalla de
+	 * bienvenida con el nombre y logo del proyecto
+	 */
 
+	// Definición de un carácter especial en 8 bytes.
+	uint8_t buf0[8];
+	buf0[0]=0b00000000;
+	buf0[1]=0b00000000;
+	buf0[2]=0b00000000;
+	buf0[3]=0b00000110;
+	buf0[4]=0b00000101;
+	buf0[5]=0b00000000;
+	buf0[6]=0b00000000;
+	buf0[7]=0b00000000;
+	UB_LCD_2x16_WriteCG(0, buf0); // Almacenar un carácter especial en el CG-RAM desde la pantalla
+	UB_LCD_2x16_PrintCG(0, 0, 0); // Salida del carácter especial en la pos. X, Y
 
-		// Definición de un carácter especial en 8 bytes.
-		uint8_t buf1[8];
-		buf1[0]=0b00000000;
-		buf1[1]=0b00000000;
-		buf1[2]=0b00000000;
-		buf1[3]=0b00000000;
-		buf1[4]=0b00010001;
-		buf1[5]=0b00001010;
-		buf1[6]=0b00001110;
-		buf1[7]=0b00011111;
-		UB_LCD_2x16_WriteCG(1, buf1); // Almacenar un carácter especial en el CG-RAM desde la pantalla
-		UB_LCD_2x16_PrintCG(1, 0, 1); // Salida del carácter especial en la pos. X, Y
+	uint8_t buf1[8];
+	buf1[0]=0b00000000;
+	buf1[1]=0b00000000;
+	buf1[2]=0b00000000;
+	buf1[3]=0b00000000;
+	buf1[4]=0b00010001;
+	buf1[5]=0b00001010;
+	buf1[6]=0b00001110;
+	buf1[7]=0b00011111;
+	UB_LCD_2x16_WriteCG(1, buf1);
+	UB_LCD_2x16_PrintCG(1, 0, 1);
 
-		// Definición de un carácter especial en 8 bytes.
-		uint8_t buf2[8];
-		buf2[0]=0b00000000;
-		buf2[1]=0b00000000;
-		buf2[2]=0b00000000;
-		buf2[3]=0b00001100;
-		buf2[4]=0b00010100;
-		buf2[5]=0b00000000;
-		buf2[6]=0b00000000;
-		buf2[7]=0b00000000;
-		UB_LCD_2x16_WriteCG(2, buf2); // Almacenar un carácter especial en el CG-RAM desde la pantalla
-		UB_LCD_2x16_PrintCG(2, 0, 2); // Salida del carácter especial en la pos. X, Y
+	uint8_t buf2[8];
+	buf2[0]=0b00000000;
+	buf2[1]=0b00000000;
+	buf2[2]=0b00000000;
+	buf2[3]=0b00001100;
+	buf2[4]=0b00010100;
+	buf2[5]=0b00000000;
+	buf2[6]=0b00000000;
+	buf2[7]=0b00000000;
+	UB_LCD_2x16_WriteCG(2, buf2);
+	UB_LCD_2x16_PrintCG(2, 0, 2);
 
-		// Definición de un carácter especial en 8 bytes.
-		uint8_t buf3[8];
-		buf3[0]=0b00000000;
-		buf3[1]=0b00001101;
-		buf3[2]=0b00001110;
-		buf3[3]=0b00000111;
-		buf3[4]=0b00000111;
-		buf3[5]=0b00000111;
-		buf3[6]=0b00001110;
-		buf3[7]=0b00000100;
-		UB_LCD_2x16_WriteCG(3, buf3); // Almacenar un carácter especial en el CG-RAM desde la pantalla
-		UB_LCD_2x16_PrintCG(0, 1, 3); // Salida del carácter especial en la pos. X, Y
+	uint8_t buf3[8];
+	buf3[0]=0b00000000;
+	buf3[1]=0b00001101;
+	buf3[2]=0b00001110;
+	buf3[3]=0b00000111;
+	buf3[4]=0b00000111;
+	buf3[5]=0b00000111;
+	buf3[6]=0b00001110;
+	buf3[7]=0b00000100;
+	UB_LCD_2x16_WriteCG(3, buf3);
+	UB_LCD_2x16_PrintCG(0, 1, 3);
 
-		// Definición de un carácter especial en 8 bytes.
-		uint8_t buf4[8];
-		buf4[0]=0b00000000;
-		buf4[1]=0b00011111;
-		buf4[2]=0b00000000;
-		buf4[3]=0b00011111;
-		buf4[4]=0b00000000;
-		buf4[5]=0b00001110;
-		buf4[6]=0b00000000;
-		buf4[7]=0b00001110;
-		UB_LCD_2x16_WriteCG(4, buf4); // Almacenar un carácter especial en el CG-RAM desde la pantalla
-		UB_LCD_2x16_PrintCG(1, 1, 4); // Salida del carácter especial en la pos. X, Y
+	uint8_t buf4[8];
+	buf4[0]=0b00000000;
+	buf4[1]=0b00011111;
+	buf4[2]=0b00000000;
+	buf4[3]=0b00011111;
+	buf4[4]=0b00000000;
+	buf4[5]=0b00001110;
+	buf4[6]=0b00000000;
+	buf4[7]=0b00001110;
+	UB_LCD_2x16_WriteCG(4, buf4);
+	UB_LCD_2x16_PrintCG(1, 1, 4);
 
-		// Definición de un carácter especial en 8 bytes.
-		uint8_t buf5[8];
-		buf5[0]=0b00000000;
-		buf5[1]=0b00010110;
-		buf5[2]=0b00001110;
-		buf5[3]=0b00011100;
-		buf5[4]=0b00011100;
-		buf5[5]=0b00011100;
-		buf5[6]=0b00001110;
-		buf5[7]=0b00000100;
-		UB_LCD_2x16_WriteCG(5, buf5); // Almacenar un carácter especial en el CG-RAM desde la pantalla
-		UB_LCD_2x16_PrintCG(2, 1, 5); // Salida del carácter especial en la pos. X, Y
+	uint8_t buf5[8];
+	buf5[0]=0b00000000;
+	buf5[1]=0b00010110;
+	buf5[2]=0b00001110;
+	buf5[3]=0b00011100;
+	buf5[4]=0b00011100;
+	buf5[5]=0b00011100;
+	buf5[6]=0b00001110;
+	buf5[7]=0b00000100;
+	UB_LCD_2x16_WriteCG(5, buf5);
+	UB_LCD_2x16_PrintCG(2, 1, 5);
 
-		UB_LCD_2x16_String(4,0,"Monitor de");
-		UB_LCD_2x16_String(5,1,"Colmenas");
+	UB_LCD_2x16_String(4,0,"Monitor de");
+	UB_LCD_2x16_String(5,1,"Colmenas");
 }
 
 /* --------------------------------------------------------------------- */
@@ -855,6 +886,8 @@ void EXTI4_IRQHandler(void)
 		} else direccion = 1;
 
 		CE_delay_EXTI_TIM(100000);
+		// Estos retardos actuan como antirrebote de los
+		// sensores infrarrojos
 
 		EXTI_ClearITPendingBit(int_infrarrojo1.int_line);
 	}
