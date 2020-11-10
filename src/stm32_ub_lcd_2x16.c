@@ -1,8 +1,8 @@
 //--------------------------------------------------------------
 // File     : stm32_ub_lcd_2x16.c
-// Datum    : 15.04.2013
-// Version  : 1.0
-// Autor    : UB
+// Datum    : 24.09.2015
+// Version  : 1.1
+// Autor    : DELLO RUSSO
 // EMail    : mc-4u(@)t-online.de
 // Web      : www.mikrocontroller-4u.de
 // CPU      : STM32F4
@@ -127,6 +127,39 @@ void UB_LCD_2x16_String(uint8_t x, uint8_t y, char *ptr)
   }
 }
 
+//--------------------------------------------------------------
+// Speichern eines Sonderzeichens im CG-RAM vom Display
+// nr : 0 bis 7 (nummer der sonderzeichens)
+// pixeldata : 8 bytes mit Pixeldaten für das Zeichen
+//--------------------------------------------------------------
+void UB_LCD_2x16_WriteCG(uint8_t nr, uint8_t *pixeldata)
+{
+  uint8_t n;
+
+  if(nr>7) nr=7;
+
+  nr=(nr<<3);
+  nr|=0x40;
+  P_LCD_2x16_Cmd(nr);
+  for(n=0;n<8;n++) {
+    P_LCD_2x16_Data(pixeldata[n]);
+  }
+}
+
+//--------------------------------------------------------------
+// Ausgabe von einem Sonderzeichen auf dem Display an x,y Position
+// x : 0 bis 15
+// y : 0 bis 1
+// nr : 0 bis 7 (nummer der sonderzeichens)
+//--------------------------------------------------------------
+void UB_LCD_2x16_PrintCG(uint8_t x, uint8_t y, uint8_t nr)
+{
+  if(nr>7) nr=7;
+
+  // Cursor setzen
+  P_LCD_2x16_Cursor(x,y);
+  P_LCD_2x16_Data(nr);
+}
 
 //--------------------------------------------------------------
 // interne Funktion

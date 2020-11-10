@@ -22,7 +22,7 @@ void DHT11_start(DHT_Sensor sensor) {
 	GPIO_Init(sensor.puerto, &GPIO_InitStructure); // Carga de la estrucura de datos.
 
 	GPIO_WriteBit(sensor.puerto, sensor.pin, 0); // pull the pin low
-	delay(18000);   // wait for 18ms
+	CE_TIM5_delay(18000);   // wait for 18ms
 
 	RCC_AHB1PeriphClockCmd(sensor.periferico, ENABLE);
 	GPIO_InitStructure.GPIO_Pin= sensor.pin;
@@ -35,10 +35,10 @@ void DHT11_start(DHT_Sensor sensor) {
 
 void check_response(DHT_Sensor sensor)
 {
-	delay(40);
+	CE_TIM5_delay(40);
 	if (!(GPIO_ReadInputDataBit(sensor.puerto,sensor.pin)))
 	{
-		delay(80);
+		CE_TIM5_delay(80);
 		if ((GPIO_ReadInputDataBit(sensor.puerto,sensor.pin)))
 			sensor.check = 1;
 	}
@@ -54,7 +54,7 @@ uint8_t read_data(DHT_Sensor sensor_read)
 
 		while (!(GPIO_ReadInputDataBit(sensor_read.puerto,sensor_read.pin)));   // wait for the pin to go high
 
-		delay(40);   // wait for 40 us
+		CE_TIM5_delay(40);   // wait for 40 us
 
 		if ((GPIO_ReadInputDataBit(sensor_read.puerto,sensor_read.pin)) == 0)   // if the pin is low
 		{
@@ -121,9 +121,9 @@ void CE_leer_dht(DHT_Sensor *sensor)
 
 // Funciones del DHT11
 
-void delay(uint32_t tiempo)
+void CE_TIM5_delay(uint32_t tiempo)
 {
-	/* Funcion delay()
+	/* Funcion CE_TIM5_delay()
 	 * Realiza un retardo en funcion de la frecuencia de reloj del microcontrolador.
 	 * Recibe como parametro el retraso, para este caso, en micro segundos debido a la configuracion del Systick.
 	 */

@@ -216,19 +216,24 @@ float (*fn[][2])(void) = {
 int main(void)
 {
 	SystemInit();
+	CE_DHT11_TIM5_Start(); // Inicializa el timer del DHT
+
+    CE_PWM_init(salida_pwm, pwm);
+	UB_LCD_2x16_Init();
+	CE_Print_StartScreen();
+	// Imprime el cartel inicial durante 5 segundos
+	CE_TIM5_delay(5000000);
+	// 5e6 us = 5000ms = 5s
 
 	PORT_init();
 
     CE_init_BT(bt);
 
-	CE_DHT11_TIM5_Start(); // Inicializa el timer del DHT
 	CE_EXTI_TIM_Start();
 	// Timer que se usa como antirebote para las interrupciones
 	// de los sensores infrarrojos
 
     CE_ADC_init(battery_adc);
-    CE_PWM_init(salida_pwm, pwm);
-	UB_LCD_2x16_Init();
 
 	SysTick_Config(SystemCoreClock / 1000);
 
@@ -594,7 +599,7 @@ void BT_sender() {
 		CE_format_float(medir_hum_int(), second_buffer);
 		siprintf(
 				buffer,
-				"T%s|H%s",
+				"t%s|h%s",
 				first_buffer,
 				second_buffer
 		);
@@ -748,6 +753,91 @@ void brilloAlto (void) {
 }
 void brilloMuyAlto (void) {
 	CE_PMW_change_duty(pwm, 100);
+}
+
+void CE_Print_StartScreen(void)
+{
+		// Definición de un carácter especial en 8 bytes.
+		uint8_t buf0[8];
+		buf0[0]=0b00000000;
+		buf0[1]=0b00000000;
+		buf0[2]=0b00000000;
+		buf0[3]=0b00000110;
+		buf0[4]=0b00000101;
+		buf0[5]=0b00000000;
+		buf0[6]=0b00000000;
+		buf0[7]=0b00000000;
+		UB_LCD_2x16_WriteCG(0, buf0); // Almacenar un carácter especial en el CG-RAM desde la pantalla
+		UB_LCD_2x16_PrintCG(0, 0, 0); // Salida del carácter especial en la pos. X, Y
+
+
+		// Definición de un carácter especial en 8 bytes.
+		uint8_t buf1[8];
+		buf1[0]=0b00000000;
+		buf1[1]=0b00000000;
+		buf1[2]=0b00000000;
+		buf1[3]=0b00000000;
+		buf1[4]=0b00010001;
+		buf1[5]=0b00001010;
+		buf1[6]=0b00001110;
+		buf1[7]=0b00011111;
+		UB_LCD_2x16_WriteCG(1, buf1); // Almacenar un carácter especial en el CG-RAM desde la pantalla
+		UB_LCD_2x16_PrintCG(1, 0, 1); // Salida del carácter especial en la pos. X, Y
+
+		// Definición de un carácter especial en 8 bytes.
+		uint8_t buf2[8];
+		buf2[0]=0b00000000;
+		buf2[1]=0b00000000;
+		buf2[2]=0b00000000;
+		buf2[3]=0b00001100;
+		buf2[4]=0b00010100;
+		buf2[5]=0b00000000;
+		buf2[6]=0b00000000;
+		buf2[7]=0b00000000;
+		UB_LCD_2x16_WriteCG(2, buf2); // Almacenar un carácter especial en el CG-RAM desde la pantalla
+		UB_LCD_2x16_PrintCG(2, 0, 2); // Salida del carácter especial en la pos. X, Y
+
+		// Definición de un carácter especial en 8 bytes.
+		uint8_t buf3[8];
+		buf3[0]=0b00000000;
+		buf3[1]=0b00001101;
+		buf3[2]=0b00001110;
+		buf3[3]=0b00000111;
+		buf3[4]=0b00000111;
+		buf3[5]=0b00000111;
+		buf3[6]=0b00001110;
+		buf3[7]=0b00000100;
+		UB_LCD_2x16_WriteCG(3, buf3); // Almacenar un carácter especial en el CG-RAM desde la pantalla
+		UB_LCD_2x16_PrintCG(0, 1, 3); // Salida del carácter especial en la pos. X, Y
+
+		// Definición de un carácter especial en 8 bytes.
+		uint8_t buf4[8];
+		buf4[0]=0b00000000;
+		buf4[1]=0b00011111;
+		buf4[2]=0b00000000;
+		buf4[3]=0b00011111;
+		buf4[4]=0b00000000;
+		buf4[5]=0b00001110;
+		buf4[6]=0b00000000;
+		buf4[7]=0b00001110;
+		UB_LCD_2x16_WriteCG(4, buf4); // Almacenar un carácter especial en el CG-RAM desde la pantalla
+		UB_LCD_2x16_PrintCG(1, 1, 4); // Salida del carácter especial en la pos. X, Y
+
+		// Definición de un carácter especial en 8 bytes.
+		uint8_t buf5[8];
+		buf5[0]=0b00000000;
+		buf5[1]=0b00010110;
+		buf5[2]=0b00001110;
+		buf5[3]=0b00011100;
+		buf5[4]=0b00011100;
+		buf5[5]=0b00011100;
+		buf5[6]=0b00001110;
+		buf5[7]=0b00000100;
+		UB_LCD_2x16_WriteCG(5, buf5); // Almacenar un carácter especial en el CG-RAM desde la pantalla
+		UB_LCD_2x16_PrintCG(2, 1, 5); // Salida del carácter especial en la pos. X, Y
+
+		UB_LCD_2x16_String(4,0,"Monitor de");
+		UB_LCD_2x16_String(5,1,"Colmenas");
 }
 
 /* --------------------------------------------------------------------- */

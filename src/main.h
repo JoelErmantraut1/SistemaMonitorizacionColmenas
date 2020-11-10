@@ -53,8 +53,9 @@ void BT_sender();
 // Funciones BT
 void LEDs_indicadores(uint32_t carga);
 // Funciones para medir e indicar carga bateria
+void CE_Print_StartScreen(void);
+// Funcion para imprimir caracteres personalizados en el LCD
 
-/* FNS REPRESENTATIVAS */
 float medir_temp_ext();
 float medir_temp_int();
 float medir_hum_ext();
@@ -77,6 +78,5 @@ void brilloMuyBajo (void);
 void brilloAlto (void);
 void brilloMuyAlto (void);
 // Funciones de la configuracion
-/* FNS REPRESENTATIVAS */
 
 #endif

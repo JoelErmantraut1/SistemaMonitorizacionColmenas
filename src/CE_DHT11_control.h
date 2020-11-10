@@ -38,7 +38,7 @@ void TIM5_Init(void);
 void CE_DHT11_TIM5_Start(void);
 void TIM5_Config(void);
 void TIM5_IRQHandler(void);
-void delay(uint32_t tiempo);          // delay en micro segundos
+void CE_TIM5_delay(uint32_t tiempo);          // delay en micro segundos
 
 void DHT11_start(DHT_Sensor sensor);
 void check_response(DHT_Sensor sensor);

@@ -79,7 +79,6 @@ typedef struct {
 
 
 
-
 //--------------------------------------------------------------
 // Globale Funktionen
 //--------------------------------------------------------------
@@ -87,6 +86,8 @@ void UB_LCD_2x16_Init(void);
 void UB_LCD_2x16_Clear(void);
 void UB_LCD_2x16_SetMode(TLCD_MODE_t mode);
 void UB_LCD_2x16_String(uint8_t x, uint8_t y, char *ptr);
+void UB_LCD_2x16_WriteCG(uint8_t nr, uint8_t *pixeldata);
+void UB_LCD_2x16_PrintCG(uint8_t x, uint8_t y, uint8_t nr);
 
 
 
