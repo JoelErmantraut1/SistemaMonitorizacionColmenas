@@ -322,7 +322,7 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 			}
 		} else {
 			 inactividad = 0;
-			 // ACA AGREGAR EL BRILLO CONFIGURADO
+			 brilloAlto();
 		}
 	} else if (contSystick % BT_CHECK_TIME == 0) {
 		if (CE_read_BT(bt, &BT_buffer)) BT_sender();
