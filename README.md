@@ -46,6 +46,7 @@ Algoritmo principal del proyecto de cuarto año de Ingeniería Electrónica que 
  - Finalizar de integrar modos de bajo consumo.
  - Incorporar funciones de cronometraje.
  
-## Modificaciones futuras
+## Posibles Modificaciones futuras
  - Integración de comunicación inalámbrica de mayor distancia, como puede ser Wi-Fi.
  - Modificación del sistema de conteo de abejas por una más funcional y/o eficiente.
+ - Incorporación de análisis de audio para conocer la salud de la población por medio de la frecuencia de los zumbidos.
