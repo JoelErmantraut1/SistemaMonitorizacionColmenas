@@ -22,6 +22,8 @@
 // Limite para el antirrebote de los sensores de proximidad en us
 #define SYSTICK_CONSTANT		1000
 // Constante que establece cada cuanto se interrumpe el Systick
+#define MAX_CONF_LEN			10
+// Maximo tamaño de la cadena que almacena la configuracion
 
 /* Librerias */
 #include <math.h>
@@ -57,6 +59,8 @@ void LEDs_indicadores(uint32_t carga);
 // Funciones para medir e indicar carga bateria
 void CE_Print_StartScreen(void);
 // Funcion para imprimir caracteres personalizados en el LCD
+void cargar_configuracion(void);
+// Carga la configuracion al inicio del programa
 
 float medir_temp_ext();
 float medir_temp_int();

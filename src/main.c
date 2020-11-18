@@ -3,6 +3,14 @@
  * que consiste en un sistema de monitorizacion de colmenas.
  */
 
+/*
+ * PENDIENTES
+ *
+ * - Corregir lo de mostrar el caracter de grados centigrados o humedad
+ * - Probar carga de configuracion
+ * - Probar almacenamiento en tarjeta de los datos medidos
+ */
+
 #include "main.h"
 
 /**
@@ -216,6 +224,9 @@ float (*fn[][2])(void) = {
 int main(void)
 {
 	SystemInit();
+
+	cargar_configuracion();
+
 	CE_DHT11_TIM5_Start(); // Inicializa el timer del DHT
 
     CE_PWM_init(salida_pwm, pwm);
@@ -235,10 +246,6 @@ int main(void)
 	// Medimos bateria y presentamos la carga con los LEDs
 
     CE_init_BT(bt);
-
-	CE_EXTI_TIM_Start();
-	// Timer que se usa como antirebote para las interrupciones
-	// de los sensores infrarrojos
 
 	SysTick_Config(SystemCoreClock / SYSTICK_CONSTANT);
 	/*
@@ -404,6 +411,49 @@ void LEDs_indicadores(uint32_t carga) {
 		CE_escribir_salida(led_bateria2, 1);
 	if (porcentaje > 90)
 		CE_escribir_salida(led_bateria3, 1);
+}
+
+void cargar_configuracion(void) {
+	char buffer[MAX_CONF_LEN];
+	CE_read_SD(card, card.config_filename, buffer);
+
+	/*
+	 * Primer caracter:
+	 *  - 0: BT apagado
+	 *  - 1: BT prendido
+	 * Segundo caracter:
+	 *  - 0: Muestreo cada 15 min
+	 *  - 1: Muestreo cada 1 hora
+	 * Tercer caracter:
+	 *  - 0: Brillo muy bajo
+	 *  - 1: Brillo bajo
+	 *  - 2: Brillo alto
+	 *  - 3: Brillo muy alto
+	 */
+	if (buffer[0] == '1') activar_bluetooth();
+	else desactivar_bluetooth();
+	// Activar - desactivar BT
+	if (buffer[1] == '1') muestrear_min();
+	else muestrear_hora();
+	// Ajustar frecuencia de muestreo
+	switch (buffer[2]) {
+	case '1':
+		brilloBajo();
+		break;
+	case '2':
+		brilloMuyBajo();
+		break;
+	case '3':
+		brilloAlto();
+		break;
+	case '4':
+		brilloMuyAlto();
+		break;
+	default:
+		brilloMuyAlto();
+		break;
+	}
+	// Ajustar brillo
 }
 
 void controlador_systick(void) { // Esta funcion es llamada en la interrupcion del SysTick
