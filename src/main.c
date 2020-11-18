@@ -129,10 +129,10 @@ ADC_PIN battery_adc = {
 
 SD_Card card = {
 		"/",
-		"/temp.txt",
-		"/hum.txt",
-		"/health.txt",
-		"/config.txt"
+		"/temp.csv",
+		"/hum.csv",
+		"/health.csv",
+		"/config.csv"
 };
 
 // Tarjeta de memoria SD
@@ -249,13 +249,16 @@ int main(void)
 		if (sensors_ready) {
 			CE_leer_dht(&sensor_int);
 			CE_leer_dht(&sensor_ext);
+			// Mido temperatura y humedad
 
 			CE_write_SD(card, card.temp_filename, sensor_int.temp_string, 0);
 			CE_write_SD(card, card.temp_filename, sensor_ext.temp_string, 0);
 			CE_write_SD(card, card.hum_filename, sensor_int.hum_string, 0);
 			CE_write_SD(card, card.hum_filename, sensor_ext.hum_string, 0);
+			// Los guardo en la tarjeta
 
 			sensors_ready = 0;
+			// Clareo flag para la siguiente medicion
 		}
 		// Cuando la variable cambia con el SysTick, se leen los datos
 		// de los sensores y se guardan en su correspondiente archivo
@@ -880,18 +883,14 @@ void EXTI4_IRQHandler(void)
 {
 
 	if(EXTI_GetITStatus(int_infrarrojo1.int_line) != RESET) {
-		if (int_infrarrojo1.int_trigger == EXTI_Trigger_Rising && CE_EXTI_TIM_ready()) {
+		if (int_infrarrojo1.int_trigger == EXTI_Trigger_Rising) {
 			if (direccion == 2) {
 				direccion = 0;
 				egresos++;
 			} else direccion = 1;
-		} else {
-			set_TIM_delay(INFRA_DELAY_LIMIT);
-			// Estos retardos actuan como antirrebote de los
-			// sensores infrarrojos
 		}
 
-		CE_EXTI_change_trigger(&int_infrarrojo1);
+		// CE_EXTI_change_trigger(&int_infrarrojo1);
 
 		EXTI_ClearITPendingBit(int_infrarrojo1.int_line);
 	}
@@ -900,18 +899,14 @@ void EXTI4_IRQHandler(void)
 void EXTI9_5_IRQHandler(void)
 {
 	if(EXTI_GetITStatus(int_infrarrojo2.int_line) != RESET) {
-		if (int_infrarrojo2.int_trigger == EXTI_Trigger_Rising && CE_EXTI_TIM_ready()) {
+		if (int_infrarrojo2.int_trigger == EXTI_Trigger_Rising) {
 			if (direccion == 1) {
 				direccion = 0;
 				ingresos++;
 			} else direccion = 2;
-		} else {
-			set_TIM_delay(INFRA_DELAY_LIMIT);
-			// Estos retardos actuan como antirrebote de los
-			// sensores infrarrojos
 		}
 
-		CE_EXTI_change_trigger(&int_infrarrojo2);
+		// CE_EXTI_change_trigger(&int_infrarrojo2);
 
 		EXTI_ClearITPendingBit(int_infrarrojo2.int_line);
 	}

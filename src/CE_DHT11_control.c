@@ -89,10 +89,10 @@ void CE_leer_dht(DHT_Sensor *sensor)
 
 	if (sum == (Rh_byte1+Rh_byte2+Temp_byte1+Temp_byte2)) {
 		if(sensor->num_identificacion == SENSOR_INT) {
-			sprintf(aux, "Tint: %d.%d °C", Temp_byte1, Temp_byte2); // Se crea una cadena con la temperatura.
+			sprintf(aux, "Tint:%d.%d,", Temp_byte1, Temp_byte2); // Se crea una cadena con la temperatura.
 			strcpy(sensor->temp_string, aux); // Se guarda la temperatura en la estructura del dht.
 
-			sprintf(aux, "Hint: %d %%", Rh_byte1);
+			sprintf(aux, "Hint:%d,", Rh_byte1);
 			strcpy(sensor->hum_string, aux);
 
 			sensor->temp_entero = Temp_byte1;
@@ -101,10 +101,10 @@ void CE_leer_dht(DHT_Sensor *sensor)
 
 			sensor->estado = STATE_DHT_CHECKSUM_GOOD; // Se cambia el estado del sensor.
 		} else if (sensor->num_identificacion == SENSOR_EXT) {
-			sprintf(aux, "Text: %d.%d °C", Temp_byte1, Temp_byte2); // Se crea una cadena con la temperatura.
+			sprintf(aux, "Text:%d.%d,", Temp_byte1, Temp_byte2); // Se crea una cadena con la temperatura.
 			strcpy(sensor->temp_string, aux); // Se guarda la temperatura en la estructura del dht.
 
-			sprintf(aux, "Hext: %d %%", Rh_byte1);
+			sprintf(aux, "Hext:%d,", Rh_byte1);
 			strcpy(sensor->hum_string, aux);
 
 			sensor->temp_entero = Temp_byte1;
