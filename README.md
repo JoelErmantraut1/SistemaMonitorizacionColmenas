@@ -50,4 +50,6 @@ Algoritmo principal del proyecto de cuarto año de Ingeniería Electrónica que 
 ## Posibles Modificaciones futuras
  - Integración de comunicación inalámbrica de mayor distancia, como puede ser Wi-Fi.
  - Modificación del sistema de conteo de abejas por una más funcional y/o eficiente.
- - Incorporación de análisis de audio para conocer la salud de la población por medio de la frecuencia de los zumbidos.
+ - Incorporación de análisis de audio para conocer la salud de la población por medio de la frecuencia y secuencia de los zumbidos.
+ - Modificación de la interfaz gráfica de la aplicación móvil.
+ - Utilización de una interfaz SDIO para la SD, en lugar de SPI, para ahorrar el hardware necesario.
