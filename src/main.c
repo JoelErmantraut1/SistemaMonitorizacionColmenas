@@ -7,8 +7,6 @@
  * PENDIENTES
  *
  * - Corregir lo de mostrar el caracter de grados centigrados o humedad
- * - Probar carga de configuracion
- * - Probar almacenamiento en tarjeta de los datos medidos
  */
 
 #include "main.h"
@@ -137,10 +135,12 @@ ADC_PIN battery_adc = {
 
 SD_Card card = {
 		"/",
-		"/temp.csv",
-		"/hum.csv",
+		"/temp_ext.csv",
+		"/temp_int.csv",
+		"/hum_ext.csv",
+		"/hum_int.csv",
 		"/health.csv",
-		"/config.csv"
+		"/config.txt"
 };
 
 // Tarjeta de memoria SD
@@ -192,6 +192,8 @@ uint32_t carga_bateria = 0;
 // Variable para ver la carga actual de la bateria
 uint16_t inactividad = 0;
 // Variable que registra si se ha presionado pulsadores en el ultimo minuto
+char brillo;
+// Variable que almacena el nivel de brillo
 
 const char *mediciones[][3] = {
     {"Exterior", "Temp:", "Hum:"},
@@ -225,8 +227,6 @@ int main(void)
 {
 	SystemInit();
 
-	cargar_configuracion();
-
 	CE_DHT11_TIM5_Start(); // Inicializa el timer del DHT
 
     CE_PWM_init(salida_pwm, pwm);
@@ -237,6 +237,14 @@ int main(void)
 	CE_TIM5_delay(5000000);
 	// 5e6 us = 5000ms = 5s
 
+	UB_LCD_2x16_Clear();
+	do {
+		UB_LCD_2x16_String(0, 0, "Carg. Config.");
+		UB_LCD_2x16_String(0, 1, "Verificando SD.");
+	} while (!cargar_configuracion());
+	// Carga la configuracion
+	// Y de paso verifica el funcionamiento de la SD
+
 	PORT_init();
 	// Configura pulsadores, LEDs e infrarrojos
 
@@ -245,12 +253,12 @@ int main(void)
 	LEDs_indicadores(carga_bateria);
 	// Medimos bateria y presentamos la carga con los LEDs
 
-    CE_init_BT(bt);
+	UB_LCD_2x16_Clear();
+	UB_LCD_2x16_String(0, 0, "Verific. Sens.");
+	UB_LCD_2x16_String(0, 1, "Temp. y Hum.");
 
 	SysTick_Config(SystemCoreClock / SYSTICK_CONSTANT);
-	/*
-	 * El SysTick incorpora la mayoria de la funciones temporizadas
-	 */
+	// El SysTick incorpora la mayoria de la funciones temporizadas
 
 	while (1) {
 		if (sensors_ready) {
@@ -258,10 +266,16 @@ int main(void)
 			CE_leer_dht(&sensor_ext);
 			// Mido temperatura y humedad
 
-			CE_write_SD(card, card.temp_filename, sensor_int.temp_string, 0);
-			CE_write_SD(card, card.temp_filename, sensor_ext.temp_string, 0);
-			CE_write_SD(card, card.hum_filename, sensor_int.hum_string, 0);
-			CE_write_SD(card, card.hum_filename, sensor_ext.hum_string, 0);
+			char buffer[10];
+
+			siprintf(buffer, "%d.%d,", sensor_ext.temp_entero, sensor_ext.temp_decimal);
+			CE_write_SD(card, card.temp_ext_filename, buffer, 0);
+			siprintf(buffer, "%d.%d,", sensor_int.temp_entero, sensor_int.temp_decimal);
+			CE_write_SD(card, card.temp_int_filename, buffer, 0);
+			siprintf(buffer, "%d,", sensor_ext.humedad);
+			CE_write_SD(card, card.hum_ext_filename, buffer, 0);
+			siprintf(buffer, "%d,", sensor_int.humedad);
+			CE_write_SD(card, card.hum_int_filename, buffer, 0);
 			// Los guardo en la tarjeta
 
 			sensors_ready = 0;
@@ -281,7 +295,7 @@ float calcular_dif_prom() { return 99.0; }
 float crono_dia() { return 23.17; }
 float crono_hora() { return 43.34; }
 // Funciones de las mediciones
-void activar_bluetooth (void) { ; }
+void activar_bluetooth (void) { CE_init_BT(bt); }
 void desactivar_bluetooth (void) { ; }
 void muestrear_hora (void)  {; }
 void muestrear_min (void) { ; }
@@ -413,9 +427,31 @@ void LEDs_indicadores(uint32_t carga) {
 		CE_escribir_salida(led_bateria3, 1);
 }
 
-void cargar_configuracion(void) {
+void ajustar_brillo(uint8_t brillo) {
+	switch (brillo) {
+	case '1':
+		brilloBajo();
+		break;
+	case '2':
+		brilloMuyBajo();
+		break;
+	case '3':
+		brilloAlto();
+		break;
+	case '4':
+		brilloMuyAlto();
+		break;
+	default: // El brillo por defecto es "muy alto"
+		brilloMuyAlto();
+		break;
+	}
+	// Ajustar brillo
+}
+
+int cargar_configuracion(void) {
 	char buffer[MAX_CONF_LEN];
-	CE_read_SD(card, card.config_filename, buffer);
+	if (!CE_read_SD(card, card.config_filename, buffer))
+		return 0;
 
 	/*
 	 * Primer caracter:
@@ -436,24 +472,11 @@ void cargar_configuracion(void) {
 	if (buffer[1] == '1') muestrear_min();
 	else muestrear_hora();
 	// Ajustar frecuencia de muestreo
-	switch (buffer[2]) {
-	case '1':
-		brilloBajo();
-		break;
-	case '2':
-		brilloMuyBajo();
-		break;
-	case '3':
-		brilloAlto();
-		break;
-	case '4':
-		brilloMuyAlto();
-		break;
-	default:
-		brilloMuyAlto();
-		break;
-	}
+	brillo = buffer[2];
+	ajustar_brillo(brillo);
 	// Ajustar brillo
+
+	return 1;
 }
 
 void controlador_systick(void) { // Esta funcion es llamada en la interrupcion del SysTick
@@ -493,7 +516,7 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 			}
 		} else {
 			 inactividad = 0;
-			 brilloAlto();
+			 ajustar_brillo(brillo);
 			 // Pone el brillo del display alto para empezar a interactuar
 		}
 	} else if (contSystick % BT_CHECK_TIME == 0) {

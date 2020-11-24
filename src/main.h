@@ -59,8 +59,10 @@ void LEDs_indicadores(uint32_t carga);
 // Funciones para medir e indicar carga bateria
 void CE_Print_StartScreen(void);
 // Funcion para imprimir caracteres personalizados en el LCD
-void cargar_configuracion(void);
+int cargar_configuracion(void);
 // Carga la configuracion al inicio del programa
+void ajustar_brillo(uint8_t brillo);
+// Funcion que ajusta el brillo del LCD
 
 float medir_temp_ext();
 float medir_temp_int();
