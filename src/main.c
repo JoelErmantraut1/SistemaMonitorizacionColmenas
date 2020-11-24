@@ -427,18 +427,18 @@ void LEDs_indicadores(uint32_t carga) {
 		CE_escribir_salida(led_bateria3, 1);
 }
 
-void ajustar_brillo(uint8_t brillo) {
+void ajustar_brillo(char brillo) {
 	switch (brillo) {
+	case '0':
+		brilloMuyBajo();
+		break;
 	case '1':
 		brilloBajo();
 		break;
 	case '2':
-		brilloMuyBajo();
-		break;
-	case '3':
 		brilloAlto();
 		break;
-	case '4':
+	case '3':
 		brilloMuyAlto();
 		break;
 	default: // El brillo por defecto es "muy alto"
@@ -466,17 +466,34 @@ int cargar_configuracion(void) {
 	 *  - 2: Brillo alto
 	 *  - 3: Brillo muy alto
 	 */
-	if (buffer[0] == '1') activar_bluetooth();
+	if (buffer[BT_INDEX] == '1') activar_bluetooth();
 	else desactivar_bluetooth();
 	// Activar - desactivar BT
-	if (buffer[1] == '1') muestrear_min();
+	if (buffer[FREC_SAMPLE_INDEX] == '1') muestrear_min();
 	else muestrear_hora();
 	// Ajustar frecuencia de muestreo
-	brillo = buffer[2];
+	brillo = buffer[BRIGHTNESS_INDEX];
 	ajustar_brillo(brillo);
 	// Ajustar brillo
 
 	return 1;
+}
+
+void cambiar_configuracion(uint8_t item, uint8_t value) {
+	/*
+	 * Recibe el item que se quiere modificar y el valor
+	 * que se le quiere poner.
+	 */
+
+	char buffer[MAX_CONF_LEN];
+	CE_read_SD(card, card.config_filename, buffer);
+	// Lee el contenido actual
+
+	buffer[item] = value;
+	// Lo modifica
+
+	CE_write_SD(card, card.config_filename, buffer, 1);
+	// Lo vuelve a guardar en la SD
 }
 
 void controlador_systick(void) { // Esta funcion es llamada en la interrupcion del SysTick
@@ -511,8 +528,8 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 			if (inactividad >= 600) {
 				// No hubo actividad en los ultimos 60 segundos
 				inactividad = 0;
-				brilloMuyBajo();
-				// Pone el brillo del display al minimo
+				CE_PMW_change_duty(pwm, 10);
+				// Fuerza el brillo del display al minimo
 			}
 		} else {
 			 inactividad = 0;
@@ -850,15 +867,23 @@ float calcular_diferencia() {
 
 void brilloMuyBajo (void) {
 	CE_PMW_change_duty(pwm, 10);
+	cambiar_configuracion(BRIGHTNESS_INDEX, '0');
+	brillo = '0';
 }
 void brilloBajo (void) {
-	CE_PMW_change_duty(pwm, 50);
+	CE_PMW_change_duty(pwm, 40);
+	cambiar_configuracion(BRIGHTNESS_INDEX, '1');
+	brillo = '1';
 }
 void brilloAlto (void) {
-	CE_PMW_change_duty(pwm, 75);
+	CE_PMW_change_duty(pwm, 60);
+	cambiar_configuracion(BRIGHTNESS_INDEX, '2');
+	brillo = '2';
 }
 void brilloMuyAlto (void) {
 	CE_PMW_change_duty(pwm, 100);
+	cambiar_configuracion(BRIGHTNESS_INDEX, '3');
+	brillo = '3';
 }
 // Funciones que varian el brillo del LCD
 

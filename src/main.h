@@ -22,8 +22,12 @@
 // Limite para el antirrebote de los sensores de proximidad en us
 #define SYSTICK_CONSTANT		1000
 // Constante que establece cada cuanto se interrumpe el Systick
-#define MAX_CONF_LEN			10
+#define MAX_CONF_LEN			3
 // Maximo tamaño de la cadena que almacena la configuracion
+#define BT_INDEX				0
+#define FREC_SAMPLE_INDEX		1
+#define BRIGHTNESS_INDEX		2
+// Define las posicion de cada funcion en el archivo de configuracion
 
 /* Librerias */
 #include <math.h>
@@ -61,7 +65,9 @@ void CE_Print_StartScreen(void);
 // Funcion para imprimir caracteres personalizados en el LCD
 int cargar_configuracion(void);
 // Carga la configuracion al inicio del programa
-void ajustar_brillo(uint8_t brillo);
+void cambiar_configuracion(uint8_t item, uint8_t value);
+// Funcion que cambia la configuracion cada vez que hay algun cambio
+void ajustar_brillo(char brillo);
 // Funcion que ajusta el brillo del LCD
 
 float medir_temp_ext();
