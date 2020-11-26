@@ -7,6 +7,8 @@
  * PENDIENTES
  *
  * - Corregir lo de mostrar el caracter de grados centigrados o humedad
+ * - Incorporar configuracion por BT
+ * - Vaciar en main.c
  */
 
 #include "main.h"
@@ -204,6 +206,15 @@ const char *mediciones[][3] = {
     {"Cronometro", "Dia:", "Hora:"}
 };
 
+const char *simbolos[][2] = {
+		{"ßC", "%"}, // El caracter ß, es el 223, que en la tabla del display, es el °
+		{"ßC", "%"},
+		{"%", "V"},
+		{"", ""},
+		{"", ""},
+		{"", ""}
+};
+
 float (*fn[][2])(void) = {
     {medir_temp_ext, medir_hum_ext},
     {medir_temp_int, medir_hum_int},
@@ -391,9 +402,22 @@ void BT_sender() {
 				second_buffer
 		);
 		break;
-	case 'b':
+	case 'r':
 		// Envia informacion del cronometro
 		// Falta incorporar RTC
+		break;
+	case 'b':
+		// Cambia el estado del BT
+		// Envia el estado actual
+		break;
+	case 'm':
+		// Cambia la frecuencia de muestreo
+		// Envia la frecuencia actual
+		break;
+	case 'x':
+		// Cambia el brillo
+		// Envia el brillo actual
+		break;
 	default:
 		break;
 	}
@@ -538,6 +562,7 @@ void controlador_systick(void) { // Esta funcion es llamada en la interrupcion d
 		}
 	} else if (contSystick % BT_CHECK_TIME == 0) {
 		if (CE_read_BT(bt, &BT_buffer)) BT_sender();
+		// Si recibio algo, envia lo que corresponde
 	}
 }
 
@@ -598,8 +623,16 @@ void select_menu(char *fila1, char *fila2) {
 		if (global_puls == BUTTON_4) {
 			level = 1;
 		} else {
-	        CE_print(fila1, mediciones[pantalla + last_global_puls - 1][1], fn[pantalla + last_global_puls - 1][0]());
-	        CE_print(fila2, mediciones[pantalla + last_global_puls - 1][2], fn[pantalla + last_global_puls - 1][1]());
+	        CE_print(fila1,
+	        		mediciones[pantalla + last_global_puls - 1][1],
+					fn[pantalla + last_global_puls - 1][0](),
+					simbolos[pantalla + last_global_puls - 1][0]
+			);
+	        CE_print(fila2,
+	        		mediciones[pantalla + last_global_puls - 1][2],
+					fn[pantalla + last_global_puls - 1][1](),
+					simbolos[pantalla + last_global_puls - 1][1]
+			);
 		}
 	}
 
