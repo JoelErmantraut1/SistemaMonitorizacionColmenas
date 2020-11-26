@@ -194,8 +194,9 @@ uint32_t carga_bateria = 0;
 // Variable para ver la carga actual de la bateria
 uint16_t inactividad = 0;
 // Variable que registra si se ha presionado pulsadores en el ultimo minuto
-char brillo;
-// Variable que almacena el nivel de brillo
+char brillo, bt_state, frec_sample;
+// Variable que almacena el nivel de brillo, el estado del BT, y la frecuencia
+// de muestreo de lso sensores de temperatura y humedad
 
 const char *mediciones[][3] = {
     {"Exterior", "Temp:", "Hum:"},
@@ -407,17 +408,30 @@ void BT_sender() {
 		// Falta incorporar RTC
 		break;
 	case 'b':
-		// Cambia el estado del BT
-		// Envia el estado actual
+		// Desactiva el Bluetooth
 		break;
 	case 'm':
 		// Cambia la frecuencia de muestreo
-		// Envia la frecuencia actual
 		break;
 	case 'x':
-		// Cambia el brillo
-		// Envia el brillo actual
+		// Cambia el brillo a muy bajo
+		brilloMuyBajo();
 		break;
+	case 's':
+		// Cambia el brillo a bajo
+		brilloBajo();
+		break;
+	case 'h':
+		// Cambia el brillo a alto
+		brilloAlto();
+		break;
+	case 't':
+		// Cambia el brillo a muy alto
+		brilloMuyAlto();
+		break;
+	case 'z':
+		siprintf(buffer, "x%c%c", frec_sample, brillo);
+		// Envia datos actuales de la configuracion
 	default:
 		break;
 	}
@@ -477,26 +491,29 @@ int cargar_configuracion(void) {
 	if (!CE_read_SD(card, card.config_filename, buffer))
 		return 0;
 
+	bt_state = buffer[BT_INDEX];
+	frec_sample = buffer[FREC_SAMPLE_INDEX];
+	brillo = buffer[BRIGHTNESS_INDEX];
+
 	/*
-	 * Primer caracter:
+	 * bt_state:
 	 *  - 0: BT apagado
 	 *  - 1: BT prendido
-	 * Segundo caracter:
+	 * frec_sample:
 	 *  - 0: Muestreo cada 15 min
 	 *  - 1: Muestreo cada 1 hora
-	 * Tercer caracter:
+	 * brillo:
 	 *  - 0: Brillo muy bajo
 	 *  - 1: Brillo bajo
 	 *  - 2: Brillo alto
 	 *  - 3: Brillo muy alto
 	 */
-	if (buffer[BT_INDEX] == '1') activar_bluetooth();
+	if (bt_state == '1') activar_bluetooth();
 	else desactivar_bluetooth();
 	// Activar - desactivar BT
-	if (buffer[FREC_SAMPLE_INDEX] == '1') muestrear_min();
+	if (frec_sample == '1') muestrear_min();
 	else muestrear_hora();
 	// Ajustar frecuencia de muestreo
-	brillo = buffer[BRIGHTNESS_INDEX];
 	ajustar_brillo(brillo);
 	// Ajustar brillo
 
