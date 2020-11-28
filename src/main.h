@@ -28,11 +28,16 @@
 #define FREC_SAMPLE_INDEX		1
 #define BRIGHTNESS_INDEX		2
 // Define las posicion de cada funcion en el archivo de configuracion
+#define FREC_SAMPLE_15			0
+#define FREC_SAMPLE_60			1
+// Defines que definen a que frecuencia corresponde cada digito
 
 /* Librerias */
 #include <math.h>
+#include <stdio.h>
 // Librerias estandar de C
 #include "stm32_ub_lcd_2x16.h"
+#include "tm_stm32f4_rtc.h"
 // Librerias de terceros
 #include "CE_GPIO_control.h"
 #include "CE_generic_functions.h"

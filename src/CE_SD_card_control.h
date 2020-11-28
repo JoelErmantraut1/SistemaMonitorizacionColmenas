@@ -23,6 +23,7 @@ typedef struct {
 	char *hum_int_filename; // Nombre archivo que guarda las humedades internas
 	char *health_filename; // Nombre archivo que guarda la cantidad de abejas
 	char *config_filename; // Nombre archivo que almacena las configuraciones
+	char *diferencia_filename; // Nombre archivo que almacena las diferencias diarias
 } SD_Card;
 
 // Estructuras

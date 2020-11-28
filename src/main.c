@@ -142,7 +142,8 @@ SD_Card card = {
 		"/hum_ext.csv",
 		"/hum_int.csv",
 		"/health.csv",
-		"/config.txt"
+		"/config.txt",
+		"/diferencias.txt"
 };
 
 // Tarjeta de memoria SD
@@ -178,8 +179,14 @@ uint8_t global_puls, last_global_puls, pantalla = 0, level = 0, menu = 0, pantal
 // Variables globales para el menu
 char BT_buffer;
 // Variable que almacena el caracter recibido por BT
+TM_RTC_Time_t Time;
+/* Estructura de Tiempo para cronómetro con RTC*/
+TM_RTC_AlarmTime_t AlarmTime;
+/* Estructura de Tiempo para Alarmas*/
 uint8_t sensors_ready = 0;
 // Variable para avisar cuando leer el dato de los sensores
+uint8_t write_ready = 0;
+// Variable para avisar cuando escribir en la SD
 uint8_t direccion = 0;
 // Variable que indica si una abeja entra o sale
 /*
@@ -197,6 +204,11 @@ uint16_t inactividad = 0;
 char brillo, bt_state, frec_sample;
 // Variable que almacena el nivel de brillo, el estado del BT, y la frecuencia
 // de muestreo de lso sensores de temperatura y humedad
+uint32_t ingresos_diarios = 0;
+uint32_t egresos_diarios = 0;
+// Variables que almacenan los ingresos y egresos diarios
+uint8_t diferencia_diaria = 0;
+// Variable que avisa cuando guarda la diferencia diaria
 
 const char *mediciones[][3] = {
     {"Exterior", "Temp:", "Hum:"},
@@ -212,7 +224,6 @@ const char *simbolos[][2] = {
 		{"ßC", "%"},
 		{"%", "V"},
 		{"", ""},
-		{"", ""},
 		{"", ""}
 };
 
@@ -221,8 +232,7 @@ float (*fn[][2])(void) = {
     {medir_temp_int, medir_hum_int},
     {carga_bateria_porcentaje, carga_bateria_tension},
     {ver_ingresos, ver_egresos},
-    {calcular_diferencia, calcular_dif_prom},
-    {crono_dia, crono_hora}
+    {calcular_diferencia, calcular_dif_prom}
 };
 // Arreglos de dos funciones por fila
 // Almacena las funciones de cada "pestaña" del menu
@@ -257,6 +267,23 @@ int main(void)
 	// Carga la configuracion
 	// Y de paso verifica el funcionamiento de la SD
 
+	if (!TM_RTC_Init(TM_RTC_ClockSource_Internal)) {
+
+    /* Set new time */
+    Time.hours = 00;
+    Time.minutes = 00;
+    Time.seconds = 00;
+    Time.year = 20;
+    Time.month = 1;
+    Time.date = 1;
+    Time.day = 1;
+
+    /* Set new RTC time */
+    TM_RTC_SetDateTime(&Time, TM_RTC_Format_BIN);
+	}
+
+	TM_RTC_Interrupts(TM_RTC_Int_5s);
+
 	PORT_init();
 	// Configura pulsadores, LEDs e infrarrojos
 
@@ -269,8 +296,27 @@ int main(void)
 	UB_LCD_2x16_String(0, 0, "Verific. Sens.");
 	UB_LCD_2x16_String(0, 1, "Temp. y Hum.");
 
+	CE_leer_dht(&sensor_int);
+	CE_leer_dht(&sensor_ext);
+
+	if (sensor_int.estado == STATE_DHT_CHECKSUM_BAD) {
+		UB_LCD_2x16_Clear();
+		UB_LCD_2x16_String(0, 0, "Sensor Interno");
+		UB_LCD_2x16_String(0, 1, "Fallando");
+		while (1);
+	}
+	if (sensor_ext.estado == STATE_DHT_CHECKSUM_BAD) {
+		UB_LCD_2x16_Clear();
+		UB_LCD_2x16_String(0, 0, "Sensor Externo");
+		UB_LCD_2x16_String(0, 1, "Fallando");
+		while (1);
+	}
+	// Verifica el funcionamiento de los DHT11
+
 	SysTick_Config(SystemCoreClock / SYSTICK_CONSTANT);
 	// El SysTick incorpora la mayoria de la funciones temporizadas
+
+	char buffer[10];
 
 	while (1) {
 		if (sensors_ready) {
@@ -278,8 +324,10 @@ int main(void)
 			CE_leer_dht(&sensor_ext);
 			// Mido temperatura y humedad
 
-			char buffer[10];
+			sensors_ready = 0;
+		}
 
+		if (write_ready) {
 			siprintf(buffer, "%d.%d,", sensor_ext.temp_entero, sensor_ext.temp_decimal);
 			CE_write_SD(card, card.temp_ext_filename, buffer, 0);
 			siprintf(buffer, "%d.%d,", sensor_int.temp_entero, sensor_int.temp_decimal);
@@ -290,28 +338,22 @@ int main(void)
 			CE_write_SD(card, card.hum_int_filename, buffer, 0);
 			// Los guardo en la tarjeta
 
-			sensors_ready = 0;
+			write_ready = 0;
 			// Clareo flag para la siguiente medicion
 		}
 		// Cuando la variable cambia con el SysTick, se leen los datos
 		// de los sensores y se guardan en su correspondiente archivo
+
+		if (diferencia_diaria) {
+			siprintf(buffer,
+					"Dia %d: %d",
+					Time.date,
+					abs(ingresos_diarios - egresos_diarios)
+					);
+			CE_write_SD(card, card.diferencia_filename, buffer, 0);
+		}
 	}
 }
-
-/* --------------------------------------------------------------------- */
-/* --------------------- FUNCIONES REPRESENTATIVAS --------------------- */
-/* -------- ESTAS NO SON LAS FNS QUE VAMOS A USAR EN EL PROYECTO ------- */
-/* --------------------------------------------------------------------- */
-
-float calcular_dif_prom() { return 99.0; }
-float crono_dia() { return 23.17; }
-float crono_hora() { return 43.34; }
-// Funciones de las mediciones
-void activar_bluetooth (void) { CE_init_BT(bt); }
-void desactivar_bluetooth (void) { ; }
-void muestrear_hora (void)  {; }
-void muestrear_min (void) { ; }
-// Funciones de la configuracion
 
 /* --------------------------------------------------------------------- */
 /* --------------------------  FNS GENERALES  -------------------------- */
@@ -511,7 +553,7 @@ int cargar_configuracion(void) {
 	if (bt_state == '1') activar_bluetooth();
 	else desactivar_bluetooth();
 	// Activar - desactivar BT
-	if (frec_sample == '1') muestrear_min();
+	if (frec_sample == (char) FREC_SAMPLE_15) muestrear_min();
 	else muestrear_hora();
 	// Ajustar frecuencia de muestreo
 	ajustar_brillo(brillo);
@@ -640,16 +682,26 @@ void select_menu(char *fila1, char *fila2) {
 		if (global_puls == BUTTON_4) {
 			level = 1;
 		} else {
-	        CE_print(fila1,
-	        		mediciones[pantalla + last_global_puls - 1][1],
-					fn[pantalla + last_global_puls - 1][0](),
-					simbolos[pantalla + last_global_puls - 1][0]
-			);
-	        CE_print(fila2,
-	        		mediciones[pantalla + last_global_puls - 1][2],
-					fn[pantalla + last_global_puls - 1][1](),
-					simbolos[pantalla + last_global_puls - 1][1]
-			);
+			int indice = pantalla + last_global_puls - 1;
+			if (indice == 5) {
+				TM_RTC_GetDateTime(&Time, TM_RTC_Format_BIN);
+
+				siprintf(fila1, "Dia: %d", Time.date - 1);
+				siprintf(fila2, "Hora: %d:%d:%d", Time.hours, Time.minutes, Time.seconds);
+			}
+			else {
+		        CE_print(fila1,
+		        		mediciones[indice][1],
+						fn[indice][0](),
+						simbolos[indice][0]
+				);
+		        CE_print(fila2,
+		        		mediciones[indice][2],
+						fn[indice][1](),
+						simbolos[indice][1]
+				);
+			}
+
 		}
 	}
 
@@ -910,6 +962,12 @@ float calcular_diferencia() {
 	// indicador modular que caracteriza a la opcion
 }
 
+float calcular_dif_prom() {
+	return calcular_diferencia() / Time.date;
+}
+// Te muestra la diferencia promedio de todos los dias
+// que lleva funcionando
+
 /* --------------------------------------------------------------------- */
 /* ------------------- 	FUNCIONES "CONFIGURACION" 	-------------------- */
 /* ----------   FNS DEL APARTADO "CONFIGURACION" DEL MENU	------------ */
@@ -936,6 +994,26 @@ void brilloMuyAlto (void) {
 	brillo = '3';
 }
 // Funciones que varian el brillo del LCD
+
+void muestrear_hora (void)  {
+	TM_RTC_Interrupts(TM_RTC_Int_60m);
+	cambiar_configuracion(FREC_SAMPLE_INDEX, (char) FREC_SAMPLE_60);
+}
+void muestrear_min (void) {
+	TM_RTC_Interrupts(TM_RTC_Int_15m);
+	cambiar_configuracion(FREC_SAMPLE_INDEX, (char) FREC_SAMPLE_15);
+}
+// Funciones de seleccion de frecuencia de muestreo
+
+void activar_bluetooth (void) {
+	CE_init_BT(bt);
+	cambiar_configuracion(BT_INDEX, '1');
+}
+void desactivar_bluetooth (void) {
+	CE_power_off_BT(bt);
+	cambiar_configuracion(BT_INDEX, '0');
+}
+// Funciones de activacion o desactivacion de BT
 
 void CE_Print_StartScreen(void)
 {
@@ -1035,6 +1113,7 @@ void EXTI4_IRQHandler(void)
 			if (direccion == 2) {
 				direccion = 0;
 				egresos++;
+				egresos_diarios++;
 			} else direccion = 1;
 		}
 
@@ -1051,6 +1130,7 @@ void EXTI9_5_IRQHandler(void)
 			if (direccion == 1) {
 				direccion = 0;
 				ingresos++;
+				ingresos_diarios++;
 			} else direccion = 2;
 		}
 
@@ -1058,4 +1138,9 @@ void EXTI9_5_IRQHandler(void)
 
 		EXTI_ClearITPendingBit(int_infrarrojo2.int_line);
 	}
+}
+
+void TM_RTC_RequestHandler(void)
+{
+	write_ready = 1;
 }
