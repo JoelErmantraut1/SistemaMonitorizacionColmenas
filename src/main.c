@@ -269,7 +269,7 @@ int main(void)
 
 	if (!TM_RTC_Init(TM_RTC_ClockSource_Internal)) {
 
-    /* Set new time */
+    // Setea hora nueva
     Time.hours = 00;
     Time.minutes = 00;
     Time.seconds = 00;
@@ -278,11 +278,11 @@ int main(void)
     Time.date = 1;
     Time.day = 1;
 
-    /* Set new RTC time */
+    // Setea nueva hora en el RTC
     TM_RTC_SetDateTime(&Time, TM_RTC_Format_BIN);
 	}
 
-	TM_RTC_Interrupts(TM_RTC_Int_5s);
+	TM_RTC_Interrupts(MIN_FREC_LABEL);
 
 	PORT_init();
 	// Configura pulsadores, LEDs e infrarrojos
@@ -326,6 +326,8 @@ int main(void)
 
 			sensors_ready = 0;
 		}
+		// Cuando la variable cambia con el SysTick, se leen los datos
+		// de los sensores.
 
 		if (write_ready) {
 			siprintf(buffer, "%d.%d,", sensor_ext.temp_entero, sensor_ext.temp_decimal);
@@ -341,14 +343,14 @@ int main(void)
 			write_ready = 0;
 			// Clareo flag para la siguiente medicion
 		}
-		// Cuando la variable cambia con el SysTick, se leen los datos
-		// de los sensores y se guardan en su correspondiente archivo
+		// Cada cierto tiempo, segun la frecuencia establecidad
+		// se guardan los datos en la tarjeta
 
 		if (diferencia_diaria) {
 			siprintf(buffer,
 					"Dia %d: %d",
 					Time.date,
-					abs(ingresos_diarios - egresos_diarios)
+					(int) absolute_substract(ingresos_diarios, egresos_diarios)
 					);
 			CE_write_SD(card, card.diferencia_filename, buffer, 0);
 		}
@@ -956,16 +958,16 @@ float carga_bateria_tension() {
 // volts y la otra porcentualmente
 
 float calcular_diferencia() {
-	return (float) abs(ingresos - egresos);
+	return absolute_substract(ingresos, egresos);
 	// Los ingresos pueden ser mayores que los egresos o al reves
 	// Por eso se agrega un valor absoluto para que muestre el
 	// indicador modular que caracteriza a la opcion
 }
 
 float calcular_dif_prom() {
-	return calcular_diferencia() / Time.date;
+	return (float) calcular_diferencia() / Time.date;
 }
-// Te muestra la diferencia promedio de todos los dias
+// Muestra la diferencia promedio de todos los dias
 // que lleva funcionando
 
 /* --------------------------------------------------------------------- */
@@ -996,11 +998,11 @@ void brilloMuyAlto (void) {
 // Funciones que varian el brillo del LCD
 
 void muestrear_hora (void)  {
-	TM_RTC_Interrupts(TM_RTC_Int_60m);
+	TM_RTC_Interrupts(MAX_FREC_LABEL);
 	cambiar_configuracion(FREC_SAMPLE_INDEX, (char) FREC_SAMPLE_60);
 }
 void muestrear_min (void) {
-	TM_RTC_Interrupts(TM_RTC_Int_15m);
+	TM_RTC_Interrupts(MIN_FREC_LABEL);
 	cambiar_configuracion(FREC_SAMPLE_INDEX, (char) FREC_SAMPLE_15);
 }
 // Funciones de seleccion de frecuencia de muestreo

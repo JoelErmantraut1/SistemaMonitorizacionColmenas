@@ -8,6 +8,7 @@
 
 void CE_print(char *buffer, const char* text, float num, const char *simbolo);
 void CE_format_float(float num, char *buffer);
+float absolute_substract(float num1, float num2);
 
 // Prototipos
 

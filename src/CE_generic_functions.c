@@ -25,3 +25,10 @@ void CE_format_float(float num, char *buffer) {
         siprintf(buffer, "%i.%i", num_entero, entero_frac_num);
     }
 }
+
+float absolute_substract(float num1, float num2) {
+	if (num1 > num2) return num1 - num2;
+	else num2 - num1;
+}
+// Funcion que calcula el valor absoluto sin producir overflow
+// de la variable

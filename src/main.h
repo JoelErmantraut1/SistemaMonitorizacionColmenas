@@ -31,6 +31,8 @@
 #define FREC_SAMPLE_15			0
 #define FREC_SAMPLE_60			1
 // Defines que definen a que frecuencia corresponde cada digito
+#define	MAX_FREC_LABEL			TM_RTC_Int_60m
+#define MIN_FREC_LABEL			TM_RTC_Int_15m
 
 /* Librerias */
 #include <math.h>
