@@ -20,9 +20,9 @@ void CE_format_float(float num, char *buffer) {
     // Lo multiplico por 100 para tener dos decimales
 
     if (entero_frac_num >= 10) {
-        siprintf(buffer, "%i.%i", num_entero, entero_frac_num);
+        siprintf(buffer, "%d.%d", num_entero, entero_frac_num);
     } else {
-        siprintf(buffer, "%i.%i", num_entero, entero_frac_num);
+        siprintf(buffer, "%d.%d", num_entero, entero_frac_num);
     }
 }
 

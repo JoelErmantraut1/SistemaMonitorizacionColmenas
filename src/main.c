@@ -3,14 +3,6 @@
  * que consiste en un sistema de monitorizacion de colmenas.
  */
 
-/*
- * PENDIENTES
- *
- * - Corregir lo de mostrar el caracter de grados centigrados o humedad
- * - Incorporar configuracion por BT
- * - Vaciar en main.c
- */
-
 #include "main.h"
 
 /**
@@ -218,7 +210,7 @@ const char *mediciones[][3] = {
     {"Interior", "Temp:", "Hum:"},
     {"Carga de bat.", "Porc:", "Tension:"},
     {"Ing. y Egr.", "Ingresos:", "Egresos:"},
-    {"Diferencia", "Dif:", "Prom:"},
+    {"Diferencia", "Diferencia:", "Promedio:"},
     {"Cronometro", "Dia:", "Hora:"}
 };
 
@@ -235,7 +227,8 @@ float (*fn[][2])(void) = {
     {medir_temp_int, medir_hum_int},
     {carga_bateria_porcentaje, carga_bateria_tension},
     {ver_ingresos, ver_egresos},
-    {calcular_diferencia, calcular_dif_prom}
+    {calcular_diferencia, calcular_dif_prom},
+	{}
 };
 // Arreglos de dos funciones por fila
 // Almacena las funciones de cada "pestaña" del menu
@@ -265,14 +258,16 @@ int main(void)
 	CE_EXTI_TIM_Start();
 
 	UB_LCD_2x16_Clear();
-	/*
+
 	do {
 		UB_LCD_2x16_String(0, 0, "Carg. Config.");
 		UB_LCD_2x16_String(0, 1, "Verificando SD.");
 	} while (!cargar_configuracion());
-	*/
+
 	// Carga la configuracion
 	// Y de paso verifica el funcionamiento de la SD
+
+	activar_bluetooth();
 
 	if (!TM_RTC_Init(TM_RTC_ClockSource_Internal)) {
 
@@ -447,6 +442,7 @@ void BT_sender() {
 		break;
 	case 'r':
 		// Envia informacion del cronometro
+		TM_RTC_GetDateTime(&Time, TM_RTC_Format_BIN);
 		siprintf(first_buffer, "Dia: %d", Time.date - 1);
 		siprintf(second_buffer, "Hora: %d:%d:%d", Time.hours, Time.minutes, Time.seconds);
 		siprintf(
@@ -498,7 +494,7 @@ void LEDs_indicadores(uint32_t carga) {
 	 * 		Prende los tres LEDs
 	 */
 
-	uint8_t porcentaje = (((float) carga - MIN_ADC_VALUE) / MAX_ADC_VALUE) * 100;
+	uint8_t porcentaje = ((float) carga / (MAX_ADC_VALUE - MIN_ADC_VALUE)) * 100;
 
 	CE_escribir_salida(led_bateria1, 0);
 	CE_escribir_salida(led_bateria1, 0);
@@ -694,6 +690,10 @@ void select_menu(char *fila1, char *fila2) {
 
 				siprintf(fila1, "Dia: %d", Time.date - 1);
 				siprintf(fila2, "Hora: %d:%d:%d", Time.hours, Time.minutes, Time.seconds);
+			}
+			else if (indice == 4) {
+				siprintf(fila1, "Dif.: %d", abs(ingresos - egresos));
+				siprintf(fila2, "Prom.: %d", abs(ingresos - egresos) / Time.date);
 			}
 			else {
 		        CE_print(fila1,
@@ -963,7 +963,7 @@ float carga_bateria_tension() {
 // volts y la otra porcentualmente
 
 float calcular_diferencia() {
-	return absolute_substract(ingresos, egresos);
+	return ver_ingresos();
 	// Los ingresos pueden ser mayores que los egresos o al reves
 	// Por eso se agrega un valor absoluto para que muestre el
 	// indicador modular que caracteriza a la opcion
