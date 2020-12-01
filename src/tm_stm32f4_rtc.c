@@ -433,10 +433,6 @@ void TM_RTC_Interrupts(TM_RTC_Int_t int_value) {
 			int_val = 0x3FF;		/* 250 ms */
 		} else if (int_value == TM_RTC_Int_125ms) {
 			int_val = 0x1FF;		/* 125 ms */
-		} else if (int_value == TM_RTC_Int_15m) {
-			int_val = 0x383FFF;
-		} else if (int_value == TM_RTC_Int_60m) {
-			int_val = 0xE0FFFF;
 		}
 
 		/* Clock divided by 8, 32768 / 8 = 4096 */

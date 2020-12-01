@@ -3,7 +3,7 @@
 // Librerias
 
 EXTI_InitTypeDef EXTI_InitStructure;
-uint32_t TimingDelay_TIM2 = 0;
+uint32_t TimingDelay_TIM2_INT = 0;
 
 // Variables
 
@@ -65,7 +65,7 @@ void TIM2_Init(void)
 
 	TIM_TimeBaseInitTypeDef  TIM_TimeBaseStructure;
 	uint16_t PrescalerValue = 0; // Variable para el prescaler.
-	uint32_t frecuencia = 10e6; // Frecuencia del contador a 10kHz. Tener cuidado de no cometer overflow en la variable PrescalerValue.
+	uint32_t frecuencia = 2e3; // Frecuencia del contador a 10kHz. Tener cuidado de no cometer overflow en la variable PrescalerValue.
 	PrescalerValue = (uint16_t) ((SystemCoreClock /2) / frecuencia) - 1; //Conversion de frecuencia al valor de Prescaler.
 	TIM_TimeBaseStructure.TIM_Period = 10; // 321.5uS (10e3 = 1 seg --> 3.215 = 321.5uS) de periodo.
 	TIM_TimeBaseStructure.TIM_Prescaler = PrescalerValue;
@@ -109,12 +109,12 @@ void CE_EXTI_TIM_Start(void)
 }
 
 uint8_t CE_EXTI_TIM_ready(void) {
-	if (!TimingDelay_TIM2) return 1;
+	if (!TimingDelay_TIM2_INT) return 1;
 	else return 0;
 }
 
 void set_TIM_delay(uint32_t tiempo) {
-	TimingDelay_TIM2 = tiempo;
+	TimingDelay_TIM2_INT = tiempo;
 	// Tiempo en us
 
 	TIM_Cmd(TIM2, ENABLE);
@@ -128,12 +128,12 @@ void CE_delay_EXTI_TIM(uint32_t tiempo)
 	 */
 
 	TIM_Cmd(TIM2, ENABLE);
-	TimingDelay_TIM2 = tiempo;
-	while(TimingDelay_TIM2 != 0);
+	TimingDelay_TIM2_INT = tiempo;
+	while(TimingDelay_TIM2_INT != 0);
 	TIM_Cmd(TIM2, DISABLE);
 
 }
-
+/*
 void TIM2_IRQHandler(void)
 {
 
@@ -148,6 +148,7 @@ void TIM2_IRQHandler(void)
 
 	}
 }
+*/
 
 
 // Funciones relacionadas al timer que se utiliza para el antirebote

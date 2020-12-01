@@ -241,8 +241,6 @@ typedef enum {
 	TM_RTC_Int_500ms,          /*!< RTC Wakeup interrupt every 500 milliseconds */
 	TM_RTC_Int_250ms,          /*!< RTC Wakeup interrupt every 250 milliseconds */
 	TM_RTC_Int_125ms,           /*!< RTC Wakeup interrupt every 125 milliseconds */
-	TM_RTC_Int_15m,
-	TM_RTC_Int_60m,
 } TM_RTC_Int_t;
 
 /**

@@ -7,9 +7,9 @@ void CE_print(char *buffer, const char* text, float num, const char *simbolo) {
     // Lo multiplico por 10 para tener un decimal
 
     if (entero_frac_num >= 10) {
-        siprintf(buffer, "%s %i.%i %s", text, num_entero, entero_frac_num, simbolo);
+        siprintf(buffer, "%s %d.%d %s", text, num_entero, entero_frac_num, simbolo);
     } else {
-        siprintf(buffer, "%s %i.%i %s", text, num_entero, entero_frac_num, simbolo);
+        siprintf(buffer, "%s %d.%d %s", text, num_entero, entero_frac_num, simbolo);
     }
 }
 
@@ -28,7 +28,11 @@ void CE_format_float(float num, char *buffer) {
 
 float absolute_substract(float num1, float num2) {
 	if (num1 > num2) return num1 - num2;
-	else num2 - num1;
+	else if (num1 < num2) return num2 - num1;
+	else return 0;
+
+	// Tecnicamente la ultima condicion no hace falta,
+	// pero para evitar conflictos la agregue
 }
 // Funcion que calcula el valor absoluto sin producir overflow
 // de la variable

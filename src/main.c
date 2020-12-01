@@ -201,7 +201,8 @@ uint32_t carga_bateria = 0;
 // Variable para ver la carga actual de la bateria
 uint16_t inactividad = 0;
 // Variable que registra si se ha presionado pulsadores en el ultimo minuto
-char brillo, bt_state, frec_sample;
+char brillo, bt_state;
+uint8_t frec_sample = 0;
 // Variable que almacena el nivel de brillo, el estado del BT, y la frecuencia
 // de muestreo de lso sensores de temperatura y humedad
 uint32_t ingresos_diarios = 0;
@@ -209,13 +210,15 @@ uint32_t egresos_diarios = 0;
 // Variables que almacenan los ingresos y egresos diarios
 uint8_t diferencia_diaria = 0;
 // Variable que avisa cuando guarda la diferencia diaria
+uint32_t TimingDelay_TIM2 = 0;
+// Variable que se usa para el temporizado de las interrupciones
 
 const char *mediciones[][3] = {
     {"Exterior", "Temp:", "Hum:"},
     {"Interior", "Temp:", "Hum:"},
     {"Carga de bat.", "Porc:", "Tension:"},
     {"Ing. y Egr.", "Ingresos:", "Egresos:"},
-    {"Diferencia", "Diferencia:", "Promedio:"},
+    {"Diferencia", "Dif:", "Prom:"},
     {"Cronometro", "Dia:", "Hora:"}
 };
 
@@ -259,11 +262,15 @@ int main(void)
 	CE_TIM5_delay(5000000);
 	// 5e6 us = 5000ms = 5s
 
+	CE_EXTI_TIM_Start();
+
 	UB_LCD_2x16_Clear();
+	/*
 	do {
 		UB_LCD_2x16_String(0, 0, "Carg. Config.");
 		UB_LCD_2x16_String(0, 1, "Verificando SD.");
 	} while (!cargar_configuracion());
+	*/
 	// Carga la configuracion
 	// Y de paso verifica el funcionamiento de la SD
 
@@ -282,7 +289,7 @@ int main(void)
     TM_RTC_SetDateTime(&Time, TM_RTC_Format_BIN);
 	}
 
-	TM_RTC_Interrupts(MIN_FREC_LABEL);
+	TM_RTC_Interrupts(TM_RTC_Int_15s);
 
 	PORT_init();
 	// Configura pulsadores, LEDs e infrarrojos
@@ -298,20 +305,6 @@ int main(void)
 
 	CE_leer_dht(&sensor_int);
 	CE_leer_dht(&sensor_ext);
-
-	if (sensor_int.estado == STATE_DHT_CHECKSUM_BAD) {
-		UB_LCD_2x16_Clear();
-		UB_LCD_2x16_String(0, 0, "Sensor Interno");
-		UB_LCD_2x16_String(0, 1, "Fallando");
-		while (1);
-	}
-	if (sensor_ext.estado == STATE_DHT_CHECKSUM_BAD) {
-		UB_LCD_2x16_Clear();
-		UB_LCD_2x16_String(0, 0, "Sensor Externo");
-		UB_LCD_2x16_String(0, 1, "Fallando");
-		while (1);
-	}
-	// Verifica el funcionamiento de los DHT11
 
 	SysTick_Config(SystemCoreClock / SYSTICK_CONSTANT);
 	// El SysTick incorpora la mayoria de la funciones temporizadas
@@ -353,6 +346,11 @@ int main(void)
 					(int) absolute_substract(ingresos_diarios, egresos_diarios)
 					);
 			CE_write_SD(card, card.diferencia_filename, buffer, 0);
+
+			ingresos_diarios = 0;
+			egresos_diarios = 0;
+
+			diferencia_diaria = 0;
 		}
 	}
 }
@@ -426,9 +424,9 @@ void BT_sender() {
 		break;
 	case 'd':
 		// Envia la diferencia entre ingresos y egresos
-		// Y la salud de la colmena
+		// y la diferencia promedio entre los mismos
 		CE_format_float(calcular_diferencia(), first_buffer);
-		CE_format_float(20.0, second_buffer);
+		CE_format_float(calcular_dif_prom(), second_buffer);
 		siprintf(
 				buffer,
 				"d%s|s%s",
@@ -449,13 +447,18 @@ void BT_sender() {
 		break;
 	case 'r':
 		// Envia informacion del cronometro
-		// Falta incorporar RTC
-		break;
-	case 'b':
-		// Desactiva el Bluetooth
+		siprintf(first_buffer, "Dia: %d", Time.date - 1);
+		siprintf(second_buffer, "Hora: %d:%d:%d", Time.hours, Time.minutes, Time.seconds);
+		siprintf(
+				buffer,
+				"c%s|h%s",
+				first_buffer,
+				second_buffer
+		);
 		break;
 	case 'm':
 		// Cambia la frecuencia de muestreo
+		frec_sample = !frec_sample;
 		break;
 	case 'x':
 		// Cambia el brillo a muy bajo
@@ -495,7 +498,7 @@ void LEDs_indicadores(uint32_t carga) {
 	 * 		Prende los tres LEDs
 	 */
 
-	uint8_t porcentaje = ((float) carga / (MAX_ADC_VALUE - MIN_ADC_VALUE)) * 100;
+	uint8_t porcentaje = (((float) carga - MIN_ADC_VALUE) / MAX_ADC_VALUE) * 100;
 
 	CE_escribir_salida(led_bateria1, 0);
 	CE_escribir_salida(led_bateria1, 0);
@@ -661,6 +664,7 @@ void select_menu(char *fila1, char *fila2) {
 		if (global_puls == BUTTON_4) menu = 0;
 		else if (global_puls != NO_BUTTON) level = 1;
 		else {
+			pantalla = 0;
 			siprintf(fila1, "%s", "Mediciones");
 			siprintf(fila2, "%s", "");
 		}
@@ -724,6 +728,7 @@ void select_menu_config(char *fila1, char *fila2) {
 		else if (global_puls != NO_BUTTON) level = 1;
 		else
 		{
+			pantalla = 0;
 			siprintf(fila1, "%s", "Configuraciones");
 			siprintf(fila2, "%s", "");
 		}
@@ -998,11 +1003,11 @@ void brilloMuyAlto (void) {
 // Funciones que varian el brillo del LCD
 
 void muestrear_hora (void)  {
-	TM_RTC_Interrupts(MAX_FREC_LABEL);
+	frec_sample = FREC_SAMPLE_60;
 	cambiar_configuracion(FREC_SAMPLE_INDEX, (char) FREC_SAMPLE_60);
 }
 void muestrear_min (void) {
-	TM_RTC_Interrupts(MIN_FREC_LABEL);
+	frec_sample = FREC_SAMPLE_15;
 	cambiar_configuracion(FREC_SAMPLE_INDEX, (char) FREC_SAMPLE_15);
 }
 // Funciones de seleccion de frecuencia de muestreo
@@ -1111,15 +1116,14 @@ void EXTI4_IRQHandler(void)
 {
 
 	if(EXTI_GetITStatus(int_infrarrojo1.int_line) != RESET) {
-		if (int_infrarrojo1.int_trigger == EXTI_Trigger_Rising) {
-			if (direccion == 2) {
-				direccion = 0;
-				egresos++;
-				egresos_diarios++;
-			} else direccion = 1;
-		}
+		if (direccion == 2) {
+			direccion = 0;
+			egresos++;
+			egresos_diarios++;
+		} else direccion = 1;
 
-		// CE_EXTI_change_trigger(&int_infrarrojo1);
+		TimingDelay_TIM2 = INFRA_DELAY; // us
+		TIM_Cmd(TIM2, ENABLE);
 
 		EXTI_ClearITPendingBit(int_infrarrojo1.int_line);
 	}
@@ -1128,15 +1132,14 @@ void EXTI4_IRQHandler(void)
 void EXTI9_5_IRQHandler(void)
 {
 	if(EXTI_GetITStatus(int_infrarrojo2.int_line) != RESET) {
-		if (int_infrarrojo2.int_trigger == EXTI_Trigger_Rising) {
-			if (direccion == 1) {
-				direccion = 0;
-				ingresos++;
-				ingresos_diarios++;
-			} else direccion = 2;
-		}
+		if (direccion == 1) {
+			direccion = 0;
+			ingresos++;
+			ingresos_diarios++;
+		} else direccion = 2;
 
-		// CE_EXTI_change_trigger(&int_infrarrojo2);
+		TimingDelay_TIM2 = INFRA_DELAY; // us
+		TIM_Cmd(TIM2, ENABLE);
 
 		EXTI_ClearITPendingBit(int_infrarrojo2.int_line);
 	}
@@ -1144,5 +1147,37 @@ void EXTI9_5_IRQHandler(void)
 
 void TM_RTC_RequestHandler(void)
 {
-	write_ready = 1;
+	static uint32_t repetitions = 0;
+
+	repetitions++;
+
+	if (repetitions % 240 == 0 && frec_sample == FREC_SAMPLE_60) { // 1 hora
+		write_ready = 1;
+	} else if (repetitions % 60 && frec_sample == FREC_SAMPLE_15) { // 15 minutos
+		write_ready = 1;
+	}
+	if (repetitions % 5760) { // 1 dia
+		diferencia_diaria = 1;
+
+		repetitions = 0;
+	}
+}
+
+void TIM2_IRQHandler(void)
+{
+
+	if (TIM_GetITStatus(TIM2, TIM_IT_CC1) != RESET)
+	{
+		TIM_ClearITPendingBit(TIM2, TIM_IT_CC1); // Se limpia la bandera de interrupcion.
+
+		if (TimingDelay_TIM2 > 0)
+		{
+			TimingDelay_TIM2--;
+		} else {
+			TIM_Cmd(TIM2, DISABLE);
+
+			direccion = 0;
+		}
+
+	}
 }

@@ -18,7 +18,7 @@
 // Indentificadores para la carga de la bateria
 #define MAX_ADC_VOLTS			2.9f
 // Maxima tension que mide el ADC
-#define	INFRA_DELAY_LIMIT		10000
+#define	INFRA_DELAY				250
 // Limite para el antirrebote de los sensores de proximidad en us
 #define SYSTICK_CONSTANT		1000
 // Constante que establece cada cuanto se interrumpe el Systick
@@ -31,8 +31,6 @@
 #define FREC_SAMPLE_15			0
 #define FREC_SAMPLE_60			1
 // Defines que definen a que frecuencia corresponde cada digito
-#define	MAX_FREC_LABEL			TM_RTC_Int_60m
-#define MIN_FREC_LABEL			TM_RTC_Int_15m
 
 /* Librerias */
 #include <math.h>
