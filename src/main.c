@@ -573,7 +573,7 @@ void cambiar_configuracion(uint8_t item, uint8_t value) {
 	CE_read_SD(card, card.config_filename, buffer);
 	// Lee el contenido actual
 
-	buffer[item] = value;
+	buffer[item] = (char) value;
 	// Lo modifica
 
 	CE_write_SD(card, card.config_filename, buffer, 1);
