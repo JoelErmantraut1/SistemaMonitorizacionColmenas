@@ -44,8 +44,6 @@ Algoritmo principal del proyecto de cuarto año de Ingeniería Electrónica que 
 
 ## Pendientes
  - Finalizar de integrar modos de bajo consumo.
- - Incorporar funciones de cronometraje.
- - Emprolijar y afinar detalles.
  
 ## Posibles Modificaciones futuras
  - Integración de comunicación inalámbrica de mayor distancia, como puede ser Wi-Fi.
